@@ -441,6 +441,18 @@ def toggle_mute(node_id: int) -> None:
         pass
 
 
+def set_mute(node_id: int, muted: bool) -> None:
+    """Force l'état mute (True=muet, False=actif) d'un nœud via wpctl."""
+    try:
+        subprocess.run(
+            ["wpctl", "set-mute", str(node_id), "1" if muted else "0"],
+            capture_output=True,
+            timeout=3,
+        )
+    except Exception:
+        pass
+
+
 def get_audio_links() -> list[AudioLink]:
     """Retourne les connexions depuis PipeWire."""
     nodes = _pw_dump()

@@ -41,7 +41,8 @@ Version: 0.1.0
 Section: sound
 Priority: optional
 Architecture: all
-Depends: python3 (>= 3.8), gir1.2-gtk-4.0, gir1.2-adwaita-1, pipewire, wireplumber
+Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1
+Recommends: wireplumber
 Maintainer: natsenack <threeaxe.france@gmail.com>
 Homepage: https://github.com/natsenack/linux-audio-manager
 Description: Modern audio management for Linux with PipeWire integration
@@ -59,11 +60,11 @@ POSTINST
 chmod 755 build/linux-audio-manager-0.1.0/DEBIAN/postinst
 
 echo "#!/bin/bash" > build/linux-audio-manager-0.1.0/DEBIAN/preinst
-echo "pkill -f linux-audio-manager || true" >> build/linux-audio-manager-0.1.0/DEBIAN/preinst
+echo "pkill -f '/opt/linux-audio-manager/src/main.py' || true" >> build/linux-audio-manager-0.1.0/DEBIAN/preinst
 chmod 755 build/linux-audio-manager-0.1.0/DEBIAN/preinst
 
 echo "#!/bin/bash" > build/linux-audio-manager-0.1.0/DEBIAN/prerm
-echo "pkill -f linux-audio-manager || true" >> build/linux-audio-manager-0.1.0/DEBIAN/prerm
+echo "pkill -f '/opt/linux-audio-manager/src/main.py' || true" >> build/linux-audio-manager-0.1.0/DEBIAN/prerm
 chmod 755 build/linux-audio-manager-0.1.0/DEBIAN/prerm
 
 cat > build/linux-audio-manager-0.1.0/DEBIAN/postrm << 'POSTRM'

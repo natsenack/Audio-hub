@@ -1156,11 +1156,10 @@ class _MainWindow(
     # -----------------------------------------------------------------------
 
     def _on_set_default_sink(self, _btn, node_id: int, name: str) -> None:
-        # Sauvegarder les volumes actuels avant que WirePlumber ne les change
+        # Snapshot volumes + mute avant que WirePlumber ne les réinitialise
         try:
-            out, sinks, _, _, _, _, _ = audio.get_full_audio_state()
-            vol_snap = {s.node_id: s.volume for s in out}
-            vol_snap.update({s.node_id: s.volume for s in sinks})
+            _, sinks, _, _, _, _, _ = audio.get_full_audio_state()
+            vol_snap = {s.node_id: (s.volume, s.muted) for s in sinks}
         except Exception:
             vol_snap = {}
 
@@ -1168,13 +1167,17 @@ class _MainWindow(
         config.save_default_sink(node_id)
         self._status_label.set_text(f"Sortie par défaut : {name}")
 
-        def _restore_and_refresh():
-            for nid, vol in vol_snap.items():
-                audio.set_node_volume(nid, int(vol * 100))
-            self._refresh_ui()
+        def _restore():
+            # Ré-appliquer les volumes exacts après que WirePlumber ait fini
+            for nid, (vol, muted) in vol_snap.items():
+                audio.set_node_volume(nid, vol * 100)   # float, pas int
+                audio.set_mute(nid, muted)
+            # Rafraîchir l'UI seulement après le restore
+            GLib.timeout_add(200, lambda: (self._refresh_ui(), False)[1])
             return False
 
-        GLib.timeout_add(200, _restore_and_refresh)
+        # 400 ms : laisser WirePlumber appliquer ses changements d'abord
+        GLib.timeout_add(400, _restore)
 
     def _on_set_default_source(self, _btn, node_id: int, name: str) -> None:
         audio.set_default_source(node_id)

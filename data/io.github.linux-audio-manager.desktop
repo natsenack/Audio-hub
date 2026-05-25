@@ -5,7 +5,7 @@ Comment=Manage audio devices and volume routing
 Exec=linux-audio-manager
 Icon=io.github.linux-audio-manager
 Terminal=false
-Categories=Audio;System;GNOME;
+Categories=AudioVideo;Audio;Utility;GNOME;
 Keywords=audio;volume;sound;pipewire;routing;
 DBusActivatable=false
 
@@ -18,8 +18,5 @@ Comment[fr]=Gérez les périphériques audio et le routage du volume
 
 # GNOME-specific
 StartupNotify=true
-X-GNOME-Bugzilla-Bugzilla=GNOME
-X-GNOME-Bugzilla-Product=linux-audio-manager
-X-GNOME-Bugzilla-Component=General
 X-GNOME-UsesNotifications=true
 

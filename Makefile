@@ -44,10 +44,10 @@ build-flatpak: check
 	@echo "Building Flatpak..."
 	@bash build-flatpak.sh
 
-# Build Debian package
+# Build Debian package (no sudo required)
 build-deb: check
-	@echo "Building Debian package..."
-	@python3 debian/deb-builder.py
+	@echo "Building Debian package v0.1.0..."
+	@bash build-deb.sh
 
 # Run flatpak-builder-lint on manifest
 lint-manifest:
