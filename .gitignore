@@ -32,10 +32,6 @@ env/
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.DS_Store
 
 # Testing
 .pytest_cache/
@@ -47,18 +43,45 @@ htmlcov/
 *.zip
 *.tar.bz2
 
+# Build artifacts
+build/
+dist/
+*.deb
+*.exe
+*.ico
+*.rpm
+
 # Flathub/Flatpak build
 repo/
 build-flatpak/
+flathub-repo/
+.flatpak-builder/
 
 # Debian build
 debian/tmp/
 debian/*.substvars
 debian/*.debhelper.log
 debian/.debhelper/
-*.deb
 *.build
 *.changes
 *.orig.tar.*
-.flatpak-builder/
 _build/
+
+# Runtime & logs
+*.log
+
+# User configuration (local settings, not to commit)
+.local/
+*.conf.local
+
+# Temporary files
+*.swp
+*.swo
+*~
+.#*
+*.tmp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+*.desktop.bak
