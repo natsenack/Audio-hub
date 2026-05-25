@@ -52,6 +52,8 @@
     </p>
   </description>
 
+  <icon type="stock">io.github.linux-audio-manager</icon>
+
   <launchable type="desktop-id">io.github.linux-audio-manager.desktop</launchable>
 
   <url type="homepage">https://github.com/yourusername/linux-audio-manager</url>
