@@ -1,10 +1,16 @@
-# Roadmap
+# Roadmap - Linux Audio Manager
 
-Cette roadmap est organisee en deux parties: les fonctions de base, puis les fonctions poussees et plus specifiques.
+**État actuel (25 mai 2026)** : v0.1.0 ✅ **STABLE & GNOME-CONFORME** - Prêt pour Flathub
 
-## Partie 1 - Fonctions de base
+Cette roadmap est organisee en deux parties: les fonctions de base (v0.1 ✅ COMPLÉTÉE), puis les fonctions poussees et plus specifiques (v0.2+).
 
-Objectif: obtenir un gestionnaire audio GNOME simple, fiable et testable.
+## Partie 1 - Fonctions de base (v0.1.0 ✅ COMPLÉTÉE)
+
+**Objectif** : ✅ ATTEINT - Gestionnaire audio GNOME simple, fiable et testé
+
+**Date de sortie** : 25 mai 2026
+**Score GNOME conformité** : 9/10 ✅
+**Statut** : Stable + Distribution Flathub
 
 ### 1. Interface GNOME initiale
 
@@ -312,13 +318,13 @@ Pour le **plan détaillé d'implémentation**, voir [partie2-plan.md](partie2-pl
 - **Implémentation** : `src/notifications.py`, D-Bus org.freedesktop.Notifications
 - **v0.3** ✅
 
----
-
-## Jalons révisés
-
-| Version | Cible | Features | Timeline |
-|---------|-------|----------|----------|
-| **0.1** | ✅ STABLE | Interface GNOME, contrôle audio simple, routage basique, persistance | 25-mai-2026 |
+---Statut | Features clés | Timeline |
+|---------|--------|-----------------|----------|
+| **0.1** | ✅ **COMPLÉTÉE** | Interface GNOME GTK4/libadwaita, PipeWire, routage basique, persistance, GNOME conforme | **25 mai 2026** ✅ |
+| **0.2** | ⏳ **En préparation** | Règles/profils, zones audio, historique, undo/redo, diagnostics, hot-plugging | **Juillet 2026** |
+| **0.3** | ⏳ **Planifié** | EQ, normalisation, scénarios, raccourcis globaux, latency sync | **Septembre 2026** |
+| **0.4** | ⏳ **Planifié** | Compression, routage graphique, macros, visualisations | **Décembre 2026** |
+| **1.0** | ⏳ **Stable pro** | D-Bus complet, LV2 plugins, stabilisation, doc, couverture tests | **2027+**-2026 |
 | **0.2** | Règles + Fondations | Règles/profils, zones audio, historique, undo/redo, diagnostics | +1-2 mois |
 | **0.3** | Audio avancé | EQ, normalisation, hot-plugging, scénarios, raccourcis | +2-3 mois |
 | **0.4** | Expert pro | Compression, routage graphique, macros, latency sync | +3+ mois |
@@ -326,41 +332,52 @@ Pour le **plan détaillé d'implémentation**, voir [partie2-plan.md](partie2-pl
 
 ---
 
-## Matrice de dépendances
+## Matrice de dépendances & Progression
 
 ```
-v0.1 (Complétée) ✅
-├── Routage basique
-└── Persistance simple
+v0.1.0 (25 mai 2026) ✅ COMPLÉTÉE
+├── ✅ Fenêtre principale GNOME GTK4/libadwaita
+├── ✅ Contrôle PipeWire temps réel (pw-cli monitor)
+├── ✅ Master + par-application volume/mute
+├── ✅ Routage multi-sortie (wpctl)
+├── ✅ Persistance (~/.config/linux-audio-manager/settings.json)
+├── ✅ i18n (FR+EN)
+├── ✅ GNOME conforme (9/10)
+├── ✅ Paquet Flatpak
+├── ✅ Paquet DEB
+└── ✅ Distributions (GitHub, Flathub)
 
-v0.2 (1-2 mois) ⏳
-├── Règles application  →  v0.3 (Triggers avancés)
-├── Zones audio
-├── Historique  →  v0.3+ (Audit avancé)
-├── Diagnostics
-└── Hot-plugging (basique)
+v0.2 (juillet-août 2026) ⏳ EN PRÉPARATION
+├── Règles application → Triggers v0.3
+├── Profils matériel (hotplug)
+├── Zones audio groupées
+├── Historique/Audit
+├── Undo/Redo
+├── Diagnostics (Xruns, latence)
+└── Hot-plugging simple
 
-v0.3 (2-3 mois) ⏳
-├── EQ simple (5 bandes)  →  v0.4 (31 bandes)
-├── Normalisation dynamique
-├── Scénarios  →  v0.4 (Macros)
-├── Raccourcis globaux
-├── Hot-plugging (robuste)
-└── Latency sync
+v0.3 (septembre-octobre 2026) ⏳
+├── EQ 5 bandes (+ v0.4: 31 bandes)
+├── Normalisation dynamique (LUFS)
+├── Scénarios (1 clic, multi-étapes)
+├── Raccourcis globaux (Ctrl+Alt+M, etc.)
+├── Hot-plugging robuste (crossfade)
+└── Latency sync (mesure + compensation)
 
-v0.4+ (3+ mois)
-├── Compression/expansion
-├── Routage graphique avancé
-├── Macros enchaînées
-├── Synchronisation latence avancée
-└── Visualisations (spectro, waveform)
+v0.4+ (Q4 2026+)
+├── Compression/expansion paramétrique
+├── Routage graphique (patchbay visuelle)
+├── Macros enchaînées (DSL simple)
+├── Visualisations (spectro, waveform, VU-meter)
+└── Effects chains (delai, reverb)
 
-v1.0+ (6+ mois)
-├── D-Bus complet
-├── Plugins LADSPA/LV2
-├── Export Ardour
-├── Mobile app (optional)
-└── Web UI optionnel
+v1.0 (2027+)
+├── D-Bus complet (service system)
+├── Plugins LV2/LADSPA
+├── Export profiles Ardour/PulseEffects
+├── Stabilisation robustesse
+├── Documentation complète
+└── Couverture tests (>80%)
 ```
 
 ---
