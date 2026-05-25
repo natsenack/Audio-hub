@@ -892,6 +892,18 @@ class _MainWindow(
             return group
 
         saved_routing = config.get_stream_routing()
+        
+        # Auto-apply saved routing for new streams (only if not already routed)
+        for stream in streams:
+            saved_names = saved_routing.get(stream.app_name)
+            if saved_names:
+                saved_sink_ids = {s.node_id for s in sinks if s.name in saved_names}
+                # Check current routing via links
+                current_links = [lk for lk in links if lk.source_node_id == stream.node_id]
+                current_routed = {lk.dest_node_id for lk in current_links}
+                # Only apply if current routing differs from saved routing
+                if current_routed != saved_sink_ids and saved_sink_ids:
+                    audio.apply_stream_routing(stream.node_id, list(saved_sink_ids))
 
         label_counts: dict[str, int] = {}
         for s in streams:
