@@ -1,0 +1,41 @@
+{
+    "app-id": "io.github.linux-audio-manager",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "46",
+    "sdk": "org.gnome.Sdk",
+    "command": "linux-audio-manager",
+    "finish-args": [
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--talk-name=org.freedesktop.DBus.Properties",
+        "--talk-name=org.freedesktop.portal.Settings",
+        "--system-talk-name=org.freedesktop.DBus",
+        "--system-talk-name=org.freedesktop.DBus.Properties"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/man",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name": "linux-audio-manager",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --no-index --no-build-isolation --prefix=${FLATPAK_DEST} ."
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        }
+    ]
+}
