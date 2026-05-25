@@ -7,6 +7,10 @@ Icon=preferences-desktop-sound
 Terminal=false
 Categories=Audio;System;GNOME;
 Keywords=audio;volume;sound;pipewire;routing;
+DBusActivatable=false
+
+# App ID for Flathub (optional but recommended)
+X-Flatpak=io.github.linux-audio-manager
 
 # Localization
 Name[fr]=Gestionnaire Audio Linux
@@ -18,3 +22,4 @@ X-GNOME-Bugzilla-Bugzilla=GNOME
 X-GNOME-Bugzilla-Product=linux-audio-manager
 X-GNOME-Bugzilla-Component=General
 X-GNOME-UsesNotifications=true
+
