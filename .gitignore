@@ -37,6 +37,8 @@ env/
 *.swp
 *.swo
 *~
+.codex/
+.agents/
 
 # Testing & coverage
 .pytest_cache/
@@ -46,6 +48,7 @@ htmlcov/
 
 # Build artifacts (keep only the final @localhost.github.io files)
 build/linux-audio-manager@local*/
+build/audio-hub@localhost.github.io/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -58,6 +61,8 @@ MANIFEST
 *.zip
 _build/
 linux-audio-manager_*.deb
+audio-hub_*.deb
+build/*.deb
 
 # Flathub/Flatpak build
 repo/
@@ -87,6 +92,7 @@ gsettings-list.cache
 # Runtime & logs
 *.log
 debug.log
+*.pid
 
 # User configuration (local settings)
 .local/
@@ -107,4 +113,3 @@ Thumbs.db
 # Editor backups
 *.orig
 *.rej
-
