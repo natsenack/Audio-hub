@@ -1,0 +1,27 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="#1a1a1a" stroke="#3b84e4" stroke-width="2"/>
+  
+  <!-- Left audio wave -->
+  <path d="M 60 128 Q 80 110 100 128 Q 80 146 60 128" fill="none" stroke="#3b84e4" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 50 128 Q 70 100 90 128 Q 70 156 50 128" fill="none" stroke="#3b84e4" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Right audio wave -->
+  <path d="M 196 128 Q 176 110 156 128 Q 176 146 196 128" fill="none" stroke="#3b84e4" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 206 128 Q 186 100 166 128 Q 186 156 206 128" fill="none" stroke="#3b84e4" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Center routing symbol (two crossing arrows) -->
+  <!-- Horizontal arrow -->
+  <line x1="95" y1="128" x2="161" y2="128" stroke="#3b84e4" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="161,128 150,120 155,128 150,136" fill="#3b84e4"/>
+  <polygon points="95,128 106,120 101,128 106,136" fill="#3b84e4"/>
+  
+  <!-- Vertical arrow -->
+  <line x1="128" y1="95" x2="128" y2="161" stroke="#5ea3f5" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="128,161 120,150 128,155 136,150" fill="#5ea3f5"/>
+  <polygon points="128,95 120,106 128,101 136,106" fill="#5ea3f5"/>
+  
+  <!-- Center circle (hub point) -->
+  <circle cx="128" cy="128" r="8" fill="#3b84e4"/>
+  <circle cx="128" cy="128" r="4" fill="#1a1a1a"/>
+</svg>

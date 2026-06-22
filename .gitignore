@@ -22,6 +22,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+src/__pycache__/
+src/*.pyc
 
 # Virtual environments
 venv/
@@ -32,24 +34,30 @@ env/
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# Testing
+# Testing & coverage
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
 
-# Distribution archives
-*.tar.gz
-*.zip
-*.tar.bz2
-
-# Build artifacts
-build/
-dist/
-*.deb
+# Build artifacts (keep only the final @localhost.github.io files)
+build/linux-audio-manager@local*/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 *.exe
 *.ico
 *.rpm
+*.tar.gz
+*.tar.bz2
+*.zip
+_build/
+linux-audio-manager_*.deb
 
 # Flathub/Flatpak build
 repo/
@@ -57,7 +65,11 @@ build-flatpak/
 flathub-repo/
 .flatpak-builder/
 
-# Debian build
+# GNOME Shell extension build artifacts
+gnome-shell-extension/build/
+gnome-shell-extension/dist/
+
+# Debian packaging
 debian/tmp/
 debian/*.substvars
 debian/*.debhelper.log
@@ -65,23 +77,34 @@ debian/.debhelper/
 *.build
 *.changes
 *.orig.tar.*
-_build/
+debian
+
+# GLib/GTK runtime
+.glib-2.0/
+.local/share/
+gsettings-list.cache
 
 # Runtime & logs
 *.log
+debug.log
 
-# User configuration (local settings, not to commit)
+# User configuration (local settings)
 .local/
 *.conf.local
+settings.json.local
 
 # Temporary files
-*.swp
-*.swo
-*~
-.#*
 *.tmp
+*.bak
+.#*
 
 # OS-specific
 .DS_Store
 Thumbs.db
 *.desktop.bak
+.directory
+
+# Editor backups
+*.orig
+*.rej
+

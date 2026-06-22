@@ -1,0 +1,8 @@
+{
+  "uuid": "audio-hub@localhost.github.io",
+  "name": "AudioHub",
+  "description": "Routage audio PipeWire avancé dans la barre GNOME Shell",
+  "version": 1,
+  "shell-version": [ "45", "46", "47", "48", "49", "50" ],
+  "url": "https://github.com/pcsec/audio-hub"
+}

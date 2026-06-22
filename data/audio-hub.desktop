@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AudioHub
+Comment=Routage audio PipeWire avancé
+Exec=audio-hub
+Icon=audio-hub
+Categories=Audio;AudioVideo;Utility;
+Terminal=false
+Keywords=audio;pipewire;routing;volume;

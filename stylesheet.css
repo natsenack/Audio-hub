@@ -1,0 +1,171 @@
+/* -*- mode: css; c-basic-offset: 4; indent-tabs-mode: nil; -*- */
+
+/* Audio Manager icon styling */
+.am-icon {
+    padding: 0 4px;
+}
+
+/* Panel button */
+#linux-audio-manager {
+    padding: 0 6px;
+}
+
+/* Microphone level bar - ProgressBar */
+progressbar.level-bar {
+    min-height: 24px;
+}
+
+progressbar.level-bar trough {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    min-height: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+progressbar.level-bar progress {
+    background: linear-gradient(90deg, #26a69a 0%, #2ec8be 100%);
+    border-radius: 5px;
+    min-height: 24px;
+    box-shadow: 0 0 10px rgba(38, 166, 154, 0.4);
+}
+
+progressbar.level-bar {
+    min-height: 16px;
+}
+
+progressbar.level-bar trough {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    min-height: 16px;
+    padding: 2px;
+}
+
+progressbar.level-bar progress {
+    background: linear-gradient(90deg, #26a69a 0%, #2ec8be 100%);
+    border-radius: 3px;
+    min-height: 12px;
+}
+
+/* État des flux audio - Badges */
+.state-badge {
+    font-size: 1.1em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    min-width: 24px;
+}
+
+.state-badge.role-primary {
+    color: #4ade80;
+    background-color: rgba(74, 222, 128, 0.1);
+}
+
+.state-badge.role-mirror {
+    color: #facc15;
+    background-color: rgba(250, 204, 21, 0.1);
+}
+
+.state-badge.role-idle {
+    color: #6b7280;
+    background-color: rgba(107, 114, 128, 0.1);
+}
+
+/* Toggles d'état */
+.state-toggle {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 1.05em;
+    min-width: 36px;
+}
+
+.state-toggle:checked {
+    background-color: rgba(74, 222, 128, 0.2);
+    border-color: #4ade80;
+}
+
+.state-toggle:not(:checked) {
+    background-color: rgba(107, 114, 128, 0.1);
+    opacity: 0.6;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Amélioration mise en page Routage                               */
+/* ─────────────────────────────────────────────────────────────── */
+
+.routing-header {
+    background: linear-gradient(180deg, 
+        rgba(255, 255, 255, 0.02) 0%, 
+        rgba(255, 255, 255, 0) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.title-large {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.small-text {
+    font-size: 0.8em;
+    opacity: 0.75;
+}
+
+/* Badges de statut améliorés */
+.stat-badge-routing {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.95em;
+    font-weight: 500;
+}
+
+.stat-badge-routing.accent {
+    background: rgba(100, 180, 220, 0.2);
+    border-color: rgba(100, 180, 220, 0.4);
+    color: #64b4dc;
+}
+
+.stat-badge-routing.success {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.4);
+    color: #4ade80;
+}
+
+.stat-badge-routing.warning {
+    background: rgba(250, 204, 21, 0.2);
+    border-color: rgba(250, 204, 21, 0.4);
+    color: #facc15;
+}
+
+/* Toggles compacts pour filtres */
+.state-toggle-compact {
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 1.1em;
+    min-width: 40px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.state-toggle-compact:checked {
+    background: rgba(74, 222, 128, 0.25);
+    border-color: rgba(74, 222, 128, 0.6);
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+}
+
+.state-toggle-compact:not(:checked) {
+    opacity: 0.6;
+}
+
+/* Bouton destructif pour vider le journal */
+.destructive-action {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+}
+
+.destructive-action:hover {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+

@@ -1,0 +1,25 @@
+{
+  "name": "audio-hub",
+  "version": "1.0.0",
+  "description": "GTK4 audio manager + GNOME Shell extension for PipeWire",
+  "main": "audio-hub.py",
+  "scripts": {
+    "test": "python3 -m unittest test_device_classifier.py test_stream_identity.py",
+    "check": "python3 -m py_compile audio-hub.py audio_device_classifier.py audiohub/__init__.py audiohub/browser_streams.py audiohub/gtk_app.py audiohub/models.py audiohub/paths.py audiohub/pipewire.py test_device_classifier.py test_stream_identity.py",
+    "build": "bash build.sh && bash build-extension.sh",
+    "build:deb": "bash build.sh",
+    "build:extension": "bash build-extension.sh"
+  },
+  "keywords": [
+    "audio",
+    "pipewire",
+    "gnome",
+    "gtk4"
+  ],
+  "author": "pcsec",
+  "license": "GPL-2.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pcsec/audio-hub"
+  }
+}

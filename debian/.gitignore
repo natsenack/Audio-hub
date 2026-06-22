@@ -1,6 +1,0 @@
-linux-audio-manager_*
-debian/linux-audio-manager/
-debian/.debhelper/
-debian/tmp/
-debian/*.debhelper.log
-debian/*.substvars
