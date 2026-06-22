@@ -21,8 +21,7 @@ jobs:
           pip install pylint 2>/dev/null || true
       - name: Lint Python files
         run: |
-          python -m py_compile linux-audio-manager.py 2>/dev/null || true
-          python -m py_compile launch.sh 2>/dev/null || true
+          python -m py_compile audio-hub.py audio_device_classifier.py audiohub/__init__.py audiohub/browser_streams.py audiohub/gtk_app.py audiohub/models.py audiohub/paths.py audiohub/pipewire.py
 
   build:
     runs-on: ubuntu-latest
@@ -34,5 +33,5 @@ jobs:
         run: bash build-extension.sh
       - name: Verify outputs
         run: |
-          [ -f build/linux-audio-manager@localhost.github.io.zip ] && echo "✓ Extension built"
+          [ -f build/audio-hub@localhost.github.io.zip ] && echo "✓ Extension built"
           [ -f build/*.deb ] || echo "⚠ DEB not built (expected in CI)"

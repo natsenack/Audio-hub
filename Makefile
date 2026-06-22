@@ -7,8 +7,8 @@ GIT_COMMIT_MSG ?= chore: prepare deb build
 help:
 	@echo "AudioHub - Available targets:"
 	@echo "  make run                   - Run the latest standalone app and replace any stale instance"
-	@echo "  make test                  - Run lightweight Python tests"
-	@echo "  make check                 - Compile-check Python sources + tests"
+	@echo "  make test                  - No automated tests are currently shipped"
+	@echo "  make check                 - Compile-check Python sources"
 	@echo "  make build-extension       - Build the GNOME Shell extension package (ZIP)"
 	@echo "  make git-sync              - Commit all changes and push HEAD to origin"
 	@echo "  make build-deb             - Commit, push, then build the Debian package"
@@ -24,10 +24,10 @@ run:
 	bash launch.sh --replace
 
 test:
-	python3 -m unittest test_device_classifier.py test_stream_identity.py
+	@echo "No automated tests are currently shipped."
 
 check:
-	python3 -m py_compile audio-hub.py audio_device_classifier.py audiohub/__init__.py audiohub/browser_streams.py audiohub/gtk_app.py audiohub/models.py audiohub/paths.py audiohub/pipewire.py test_device_classifier.py test_stream_identity.py
+	python3 -m py_compile audio-hub.py audio_device_classifier.py audiohub/__init__.py audiohub/browser_streams.py audiohub/gtk_app.py audiohub/models.py audiohub/paths.py audiohub/pipewire.py
 
 git-sync:
 	@echo "==> Git sync..."

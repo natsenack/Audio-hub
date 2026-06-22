@@ -31,9 +31,6 @@ audio-hub/
 ├── extension.js
 ├── stylesheet.css
 ├── tray_helper.py
-├── test_device_classifier.py
-├── test_audio.py
-├── linux-audio-manager.py      # ancien prototype, non utilise par build/run
 └── data/
     ├── audio-hub.desktop
     └── icons/
@@ -80,8 +77,7 @@ make check
 Equivalent:
 
 ```bash
-python3 -m unittest test_device_classifier.py
-python3 -m py_compile audio-hub.py audio_device_classifier.py audiohub/*.py test_device_classifier.py test_stream_identity.py
+python3 -m py_compile audio-hub.py audio_device_classifier.py audiohub/*.py
 ```
 
 ## Dependances
@@ -109,12 +105,12 @@ pip install -r requirements.txt
 - `audio_device_classifier.py` centralise la detection des types de peripheriques audio.
 - `tray_helper.py` gere l'integration tray/AppIndicator.
 - `extension.js` est l'extension GNOME Shell minimale pour ouvrir l'app et afficher `wpctl status`.
+- Les anciens fichiers de test ad hoc ont ete retires du depot.
 
 ## Notes d'organisation
 
 - `audio-hub.py` reste le point d'entree stable pour le build et le lancement.
 - La logique partagee est maintenant recentree dans le package `audiohub/`.
-- `linux-audio-manager.py` reste dans le depot comme ancien fichier de reference, mais il n'est pas lance par `make run`, `launch.sh` ou `build.sh`.
 - La prochaine etape logique, si on veut aller encore plus loin, serait de decouper `audiohub/gtk_app.py` en sous-modules UI.
 
 ## Utilisation
