@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_NAME="audio-hub"
-VERSION="1.0"
+VERSION="1.0.0"
 ARCH="all"
 BUILD_DIR="${ROOT_DIR}/build"
 STAGING_DIR="/tmp/audio-hub-deb-$$"

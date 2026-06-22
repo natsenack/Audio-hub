@@ -1508,7 +1508,7 @@ class LinuxAudioManagerApp(Adw.Application):
         t_lbl = Gtk.Label()
         t_lbl.set_markup('<span size="x-large"><b>AudioHub</b></span>')
         v_lbl = Gtk.Label()
-        v_lbl.set_markup('<span color="gray">v1.1  ·  Routage audio PipeWire avancé</span>')
+        v_lbl.set_markup('<span color="gray">v1.0.0  ·  Routage audio PipeWire avancé</span>')
         hero.append(logo); hero.append(t_lbl); hero.append(v_lbl)
         page.append(hero); page.append(self._sep())
 

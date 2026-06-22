@@ -61,7 +61,7 @@ make build-extension
 Le paquet Debian genere:
 
 ```bash
-build/audio-hub_1.0_all.deb
+build/audio-hub_1.0.0_all.deb
 ```
 
 L'extension GNOME genere:
