@@ -339,7 +339,8 @@ class AudioManager(BrowserStreamIdentityMixin):
         return True
 
     def get_journal(self):
-        return '\n'.join(self._journal[-80:])
+        journal_list = list(self._journal)
+        return '\n'.join(journal_list[-80:])
 
     def clear_journal(self):
         self._journal.clear()
