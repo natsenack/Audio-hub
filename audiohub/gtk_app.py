@@ -107,6 +107,7 @@ class LinuxAudioManagerApp(Adw.Application):
         self._expansion_syncing = False
         self._css_loaded = False
         self._timers_started = False
+        self._timer_ids = []
         self._cleanup_done = False
         # Configuration loopback
         import os
@@ -147,10 +148,12 @@ class LinuxAudioManagerApp(Adw.Application):
             self._ensure_tray_helper()
 
         if not self._timers_started:
-            GLib.timeout_add(1000, self._restore_loopback_configs)
-            GLib.timeout_add_seconds(5, self._monitor_loopback_links)
-            GLib.timeout_add_seconds(2, self._auto_refresh)
-            GLib.timeout_add(200, self._update_level_bars_only)
+            self._timer_ids = [
+                GLib.timeout_add(1000, self._restore_loopback_configs),
+                GLib.timeout_add_seconds(5, self._monitor_loopback_links),
+                GLib.timeout_add_seconds(2, self._auto_refresh),
+                GLib.timeout_add(200, self._update_level_bars_only),
+            ]
             self._timers_started = True
 
         self.window.present()
@@ -172,9 +175,16 @@ class LinuxAudioManagerApp(Adw.Application):
 
         self._cleanup_done = True
         self.audio._audio_running = False
-        for source_id, thread in self.audio._source_threads.items():
+        for timer_id in self._timer_ids:
             try:
-                thread.join(timeout=0.5)
+                GLib.source_remove(timer_id)
+            except Exception:
+                pass
+        self._timer_ids.clear()
+        for thread_state in self.audio._source_threads.values():
+            try:
+                thread_state['stop_event'].set()
+                thread_state['thread'].join(timeout=0.5)
             except Exception:
                 pass
         if self._tray_helper_process and self._tray_helper_process.poll() is None:
@@ -190,6 +200,8 @@ class LinuxAudioManagerApp(Adw.Application):
         """Détecte les changements PipeWire sans reconstruire les onglets."""
         try:
             self.audio.refresh()
+            if not self.window or not self.window.get_visible():
+                return True
             fingerprint = self._build_refresh_fingerprint()
             if fingerprint != self._last_refresh_fingerprint:
                 self._last_refresh_fingerprint = fingerprint
@@ -201,7 +213,7 @@ class LinuxAudioManagerApp(Adw.Application):
     def _update_level_bars_only(self) -> bool:
         """Met à jour rapidement les barres de niveau des micros depuis le cache."""
         try:
-            if self.window and hasattr(self, '_device_level_bars'):
+            if self.window and self.window.get_visible() and hasattr(self, '_device_level_bars'):
                 # Créer une copie pour éviter les race conditions pendant refresh
                 level_bars_copy = dict(self._device_level_bars)
                 for source_id, widgets in level_bars_copy.items():
@@ -447,11 +459,16 @@ class LinuxAudioManagerApp(Adw.Application):
         )
 
     def _toggle_window(self):
-        if self.window and self.window.get_visible(): self.window.set_visible(False)
-        elif self.window: self.window.present()
+        if self.window and self.window.get_visible():
+            self.window.set_visible(False)
+        elif self.window:
+            self._on_refresh()
+            self.window.present()
 
     def _show_window(self):
-        if self.window: self.window.present()
+        if self.window:
+            self._on_refresh()
+            self.window.present()
 
     def _quit_app(self):
         self._cleanup_background_resources()
@@ -630,7 +647,7 @@ class LinuxAudioManagerApp(Adw.Application):
         # ═══════════════════════════════════════════════════════════════════════
         # SECTION 2: Barre de niveau UNIQUEMENT pour les micros
         # ═══════════════════════════════════════════════════════════════════════
-        if not is_sink:
+        if not is_sink and getattr(device, 'is_real_microphone', False):
             level_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             level_section.set_margin_top(12)
             level_section.set_margin_bottom(10)

@@ -1,5 +1,6 @@
 """PipeWire backend for AudioHub."""
 
+from collections import deque
 import json
 import re
 import subprocess
@@ -19,7 +20,7 @@ class AudioManager(BrowserStreamIdentityMixin):
         self.data_dir = Path.home() / '.local' / 'share' / 'audio-hub'
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.settings = Settings(self.data_dir / 'settings.json')
-        self._journal: list[str] = []
+        self._journal = deque(maxlen=400)
         self._nodes: dict = {}
         self._stream_volumes: dict = {}
         self._ports: Dict = {}
@@ -37,17 +38,6 @@ class AudioManager(BrowserStreamIdentityMixin):
         self._mpris_cache = {'players': {}, 'expires_at': 0.0}
 
         self.refresh()
-
-        if self._sounddevice is not None:
-            for source in self._sources:
-                thread = threading.Thread(
-                    target=self._audio_capture_source,
-                    args=(source.id, source.description, source.node_name),
-                    daemon=True,
-                )
-                thread.start()
-                self._source_threads[source.id] = thread
-                time.sleep(0.1)
 
     @staticmethod
     def _load_sounddevice():
@@ -139,7 +129,41 @@ class AudioManager(BrowserStreamIdentityMixin):
             if source.id not in self._source_peak_levels:
                 self._source_peak_levels[source.id] = 0.0
 
+        self._sync_source_threads()
         self.update_source_peak_levels()
+
+    def _sync_source_threads(self):
+        if self._sounddevice is None:
+            return
+
+        capture_sources = {
+            source.id: source for source in self._sources if getattr(source, 'is_real_microphone', False)
+        }
+
+        for source_id, thread_state in list(self._source_threads.items()):
+            if source_id in capture_sources:
+                continue
+            stop_event = thread_state['stop_event']
+            stop_event.set()
+            thread_state['thread'].join(timeout=0.5)
+            del self._source_threads[source_id]
+            self._source_peak_levels.pop(source_id, None)
+
+        for source_id, source in capture_sources.items():
+            if source_id in self._source_threads:
+                continue
+            stop_event = threading.Event()
+            thread = threading.Thread(
+                target=self._audio_capture_source,
+                args=(source, stop_event),
+                daemon=True,
+            )
+            thread.start()
+            self._source_threads[source_id] = {
+                'thread': thread,
+                'stop_event': stop_event,
+            }
+            time.sleep(0.05)
 
     def _parse_node_line(self, line):
         return re.search(r'(\*?)\s*(\d+)\.\s+(.+?)\s+\[vol:\s*([\d.]+)((?:\s+MUTED)?)\]', line)
@@ -560,9 +584,14 @@ class AudioManager(BrowserStreamIdentityMixin):
     def update_source_peak_levels(self):
         pass
 
-    def _audio_capture_source(self, source_id, description, node_name):
+    def _audio_capture_source(self, source, stop_event):
         if self._sounddevice is None:
             return
+
+        source_id = source.id
+        description = source.description
+        node_name = source.node_name
+        allow_default_fallback = bool(source.is_default)
 
         try:
             import numpy as np
@@ -597,8 +626,12 @@ class AudioManager(BrowserStreamIdentityMixin):
                             device_index = index
                             break
 
-            if device_index is None:
+            if device_index is None and allow_default_fallback:
                 device_index = sd.default.device[0]
+
+            if device_index is None:
+                self._source_peak_levels[source_id] = 0.0
+                return
 
             sample_rate = 48000
             blocksize = 512
@@ -651,7 +684,7 @@ class AudioManager(BrowserStreamIdentityMixin):
                 callback=callback,
                 latency='low',
             ):
-                while self._audio_running:
+                while self._audio_running and not stop_event.is_set():
                     now = time.time()
                     silence_duration = now - last_update
                     if silence_duration > 0.2:
@@ -661,7 +694,7 @@ class AudioManager(BrowserStreamIdentityMixin):
 
         except Exception:
             decay = 0.95
-            while self._audio_running:
+            while self._audio_running and not stop_event.is_set():
                 try:
                     for source in self._sources:
                         if source.id == source_id:
