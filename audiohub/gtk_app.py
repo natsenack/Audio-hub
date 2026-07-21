@@ -11,8 +11,10 @@ gi.require_version('Gdk', '4.0')
 
 from gi.repository import Gtk, Adw, Gdk, Gio, GLib, Pango
 import os
+import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 from .models import PipeWireSink, PipeWireSource, PipeWireStream
 from .paths import ICON_ROOT, PROJECT_ROOT
@@ -112,6 +114,7 @@ class LinuxAudioManagerApp(Adw.Application):
         self._settings_window = None
         self._routing_filter = 'all'
         self._routing_query = ''
+        self._autostart_file = Path.home() / '.config' / 'autostart' / 'audio-hub.desktop'
         # Configuration loopback
         import os
         config_dir = os.path.expanduser('~/.config/audio-hub')
@@ -375,6 +378,14 @@ class LinuxAudioManagerApp(Adw.Application):
         tray_row.connect('notify::active', self._on_tray_setting_changed)
         general.add(tray_row)
 
+        autostart_row = Adw.SwitchRow(
+            title='Lancer AudioHub au démarrage',
+            subtitle='Démarrer automatiquement dans la barre système',
+        )
+        autostart_row.set_active(bool(self._setting('startup', 'autostart', default=False)))
+        autostart_row.connect('notify::active', self._on_autostart_setting_changed)
+        general.add(autostart_row)
+
         close_row = Adw.SwitchRow(title='Réduire dans la barre système à la fermeture',
                                   subtitle='Le bouton de fermeture masque la fenêtre au lieu de quitter')
         close_row.set_active(bool(self._setting('window', 'minimize_on_close', default=True)))
@@ -557,10 +568,51 @@ class LinuxAudioManagerApp(Adw.Application):
         else:
             self._stop_tray_helper()
 
+    def _on_autostart_setting_changed(self, row, _pspec):
+        enabled = row.get_active()
+        self._set_setting('startup', 'autostart', enabled)
+        if enabled and not self._setting('tray', 'enabled', default=True):
+            # Un démarrage en arrière-plan doit rester récupérable depuis le
+            # tray ; on le réactive automatiquement si nécessaire.
+            self._set_setting('tray', 'enabled', True)
+            self._ensure_tray_helper()
+        self._set_autostart_enabled(enabled)
+
+    def _set_autostart_enabled(self, enabled):
+        """Installe ou retire l'entrée autostart de l'utilisateur courant."""
+        try:
+            if not enabled:
+                if self._autostart_file.exists():
+                    self._autostart_file.unlink()
+                return
+
+            self._autostart_file.parent.mkdir(parents=True, exist_ok=True)
+            executable = shutil.which('audio-hub')
+            if executable:
+                exec_line = f'{executable} --background'
+            else:
+                launcher = str(PROJECT_ROOT / 'launch.sh')
+                escaped_launcher = launcher.replace('\\', '\\\\').replace('"', '\\"')
+                exec_line = f'"{escaped_launcher}" --background'
+            desktop_entry = (
+                '[Desktop Entry]\n'
+                'Type=Application\n'
+                'Name=AudioHub\n'
+                'Comment=Routage audio PipeWire avancé\n'
+                f'Exec={exec_line}\n'
+                'Icon=audio-hub\n'
+                'Terminal=false\n'
+                'X-GNOME-Autostart-enabled=true\n'
+            )
+            self._autostart_file.write_text(desktop_entry, encoding='utf-8')
+        except OSError as exc:
+            self.audio._journal.append(f'# autostart: erreur — {exc}')
+
     def _reset_preferences(self, settings_window):
         self.audio.settings._data.pop('preferences', None)
         self.audio.settings.save()
         self._apply_color_scheme('system')
+        self._set_autostart_enabled(False)
         if not self.has_tray_helper():
             self._ensure_tray_helper()
         if self._timers_started:
