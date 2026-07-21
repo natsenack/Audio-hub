@@ -46,7 +46,7 @@ build-deb-local:
 	bash build.sh
 
 install-deb: build-deb
-	sudo apt install ./build/$(APP_BIN)_1.0_all.deb
+	sudo apt install ./build/$(APP_BIN)_1.0.0_all.deb
 
 build-extension:
 	bash build-extension.sh
