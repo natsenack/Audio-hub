@@ -33,6 +33,25 @@ _BROWSERS = {
 
 
 class BrowserStreamIdentityMixin:
+    _KNOWN_SITE_NAMES = {
+        'youtube': 'YouTube',
+        'youtube music': 'YouTube Music',
+        'spotify': 'Spotify',
+        'netflix': 'Netflix',
+        'disney+': 'Disney+',
+        'molotov': 'Molotov',
+        'twitch': 'Twitch',
+        'prime video': 'Prime Video',
+        'apple tv': 'Apple TV',
+        'deezer': 'Deezer',
+        'soundcloud': 'SoundCloud',
+        'github': 'GitHub',
+        'gitlab': 'GitLab',
+        'discord': 'Discord',
+        'slack': 'Slack',
+        'teams': 'Microsoft Teams',
+    }
+
     def get_browser_info(self, stream_id):
         props = self._nodes.get(stream_id, {})
         binary = props.get('application.process.binary', '').lower()
@@ -105,11 +124,17 @@ class BrowserStreamIdentityMixin:
         primary = app_name or fallback_name or stream_name or media_title or 'Flux audio'
         return {
             'kind': 'native_app',
-            'kind_label': 'Application',
+            'kind_label': 'Application native',
             'icon': '🎵',
             'family': None,
             'primary': primary,
             'secondary': binary or stream_name or None,
+            'app_name': primary,
+            'site_name': None,
+            'content_title': media_title or None,
+            'technical_name': desktop_file or binary or app_name,
+            'confidence': 'high' if desktop_file or app_name else 'medium',
+            'identity_key': self._make_identity_key('native', desktop_file or binary or app_name or primary),
             'raw_app_name': app_name,
             'raw_title': media_title,
             'raw_artist': media_artist,
@@ -185,6 +210,12 @@ class BrowserStreamIdentityMixin:
                 'family': browser,
                 'primary': browser_instance or browser,
                 'secondary': app_name if app_name and app_name.lower() != browser.lower() else None,
+                'app_name': browser,
+                'site_name': None,
+                'content_title': media_title or None,
+                'technical_name': binary or browser,
+                'confidence': 'high',
+                'identity_key': self._make_identity_key('browser', browser),
                 'raw_app_name': app_name,
                 'raw_title': media_title,
                 'raw_artist': media_artist,
@@ -201,11 +232,17 @@ class BrowserStreamIdentityMixin:
                 secondary_parts.append(media_artist)
             return {
                 'kind': 'browser_app',
-                'kind_label': 'App web',
+                'kind_label': 'Webapp / PWA',
                 'icon': '🧩',
                 'family': browser,
                 'primary': primary,
                 'secondary': '  ·  '.join(part for part in secondary_parts if part),
+                'app_name': primary,
+                'site_name': site_name,
+                'content_title': content_title or media_title or None,
+                'technical_name': desktop_file or app_name or binary,
+                'confidence': 'high' if has_app_flag or custom_desktop or custom_app_name else 'medium',
+                'identity_key': self._make_identity_key('webapp', desktop_file or app_name or primary),
                 'raw_app_name': app_name,
                 'raw_title': media_title,
                 'raw_artist': media_artist,
@@ -225,15 +262,27 @@ class BrowserStreamIdentityMixin:
             secondary_parts.append(app_name)
         return {
             'kind': 'browser_site',
-            'kind_label': 'Site',
+            'kind_label': 'Site web',
             'icon': '🌐',
             'family': browser,
             'primary': primary,
             'secondary': '  ·  '.join(part for part in secondary_parts if part),
+            'app_name': browser,
+            'site_name': site_name or primary,
+            'content_title': content_title or media_title or None,
+            'technical_name': binary or browser,
+            'confidence': 'medium' if site_name else 'low',
+            'identity_key': self._make_identity_key('site', f'{browser}:{site_name or primary}'),
             'raw_app_name': app_name,
             'raw_title': media_title,
             'raw_artist': media_artist,
         }
+
+    @staticmethod
+    def _make_identity_key(kind, value):
+        """Construit une clé stable, lisible et indépendante du node PipeWire."""
+        normalized = re.sub(r'[^a-z0-9]+', '-', str(value or '').lower()).strip('-')
+        return f'{kind}:{normalized or "unknown"}'
 
     def _ambiguous_browser_streams(self, browser, binary):
         browser_tokens = self._browser_tokens(browser, binary)
@@ -403,6 +452,18 @@ class BrowserStreamIdentityMixin:
             first_part = parts[0]
             last_part = parts[-1]
 
+            # Les titres média suivent souvent « Site - Contenu » ou
+            # « Contenu - Site ». La marque connue est prioritaire sur une
+            # heuristique basée uniquement sur le nombre de mots.
+            known_first = self._known_site_name(first_part)
+            known_last = self._known_site_name(last_part)
+            if known_first:
+                content = separator.join(parts[1:]).strip()
+                return known_first, self._strip_repeated_site_prefix(content, known_first)
+            if known_last:
+                content = separator.join(parts[:-1]).strip()
+                return known_last, self._strip_repeated_site_prefix(content, known_last)
+
             if self._looks_like_app_name(last_part):
                 site_name = last_part
                 content_title = separator.join(parts[:-1]).strip()
@@ -417,6 +478,10 @@ class BrowserStreamIdentityMixin:
             return cleaned_app, cleaned_title if cleaned_title.lower() != cleaned_app.lower() else ''
 
         return '', cleaned_title
+
+    def _known_site_name(self, value):
+        normalized = re.sub(r'\s+', ' ', (value or '').strip().lower())
+        return self._KNOWN_SITE_NAMES.get(normalized)
 
     @staticmethod
     def _strip_repeated_site_prefix(content_title, site_name):

@@ -390,7 +390,6 @@ class AudioManager(BrowserStreamIdentityMixin):
         return keys
 
     def get_saved_sink_role(self, stream_id, sink):
-        app_bin = self._nodes.get(stream_id, {}).get('application.process.binary', '').lower()
         primary_key = self._sink_settings_primary_key(sink)
 
         for settings_key in self._sink_settings_lookup_keys(sink):
@@ -400,9 +399,25 @@ class AudioManager(BrowserStreamIdentityMixin):
                     self.settings.set('routing', str(stream_id), primary_key, 'role', role)
                 return role
 
-        if not app_bin:
-            return None
+        # Les règles persistantes utilisent l'identité logique du flux, et
+        # non plus uniquement son binaire. Cela sépare par exemple YouTube,
+        # Spotify Web, une PWA et le navigateur Chromium lui-même.
+        identity = self.get_stream_identity(stream_id)
+        identity_key = identity.get('identity_key')
+        if identity_key:
+            for settings_key in self._sink_settings_lookup_keys(sink):
+                role = self.settings.get('routing_by_identity', identity_key, settings_key, 'role')
+                if role:
+                    if settings_key != primary_key:
+                        self.settings.set('routing_by_identity', identity_key, primary_key, 'role', role)
+                    return role
 
+        # Compatibilité avec les anciennes règles. Elles ne sont utilisées
+        # que pour les applications natives, jamais pour un navigateur, afin
+        # d'éviter de propager une ancienne règle Chromium à tous ses sites.
+        app_bin = self._nodes.get(stream_id, {}).get('application.process.binary', '').lower()
+        if identity.get('kind') != 'native_app' or not app_bin:
+            return None
         for settings_key in self._sink_settings_lookup_keys(sink):
             role = self.settings.get('routing_by_app', app_bin, settings_key, 'role')
             if role:
@@ -415,8 +430,39 @@ class AudioManager(BrowserStreamIdentityMixin):
     def save_sink_role(self, stream_id, sink, role, app_bin=''):
         settings_key = self._sink_settings_primary_key(sink)
         self.settings.set('routing', str(stream_id), settings_key, 'role', role)
-        if app_bin:
-            self.settings.set('routing_by_app', app_bin, settings_key, 'role', role)
+        identity = self.get_stream_identity(stream_id)
+        identity_key = identity.get('identity_key')
+        if identity_key:
+            self.settings.set('routing_by_identity', identity_key, settings_key, 'role', role)
+
+    def set_stream_route(self, stream_id, sink_id, role, sinks):
+        """Applique une décision de routage unique et persistante.
+
+        PRIMARY est exclusif, MIRROR ajoute une sortie et idle supprime le
+        lien. Toutes les mutations passent par cette méthode afin que
+        l'interface et la restauration au démarrage aient le même comportement.
+        """
+        target = next((sink for sink in sinks if sink.id == sink_id), None)
+        if target is None:
+            return False
+
+        if role == 'PRIMARY':
+            for sink in sinks:
+                if sink.id == sink_id:
+                    continue
+                self.save_sink_role(stream_id, sink, 'idle')
+                self.unroute_stream_from_sink(stream_id, sink.id)
+            self.save_sink_role(stream_id, target, 'PRIMARY')
+            self.route_stream_to_sink(stream_id, target.id)
+        elif role == 'MIRROR':
+            self.save_sink_role(stream_id, target, 'MIRROR')
+            self.route_stream_to_sink(stream_id, target.id)
+        elif role == 'idle':
+            self.save_sink_role(stream_id, target, 'idle')
+            self.unroute_stream_from_sink(stream_id, target.id)
+        else:
+            return False
+        return True
 
     def get_saved_sink_sample_rate(self, sink):
         primary_key = self._sink_settings_primary_key(sink)
@@ -705,10 +751,12 @@ class AudioManager(BrowserStreamIdentityMixin):
                     break
 
     def restore_saved_routing(self, stream_id, sinks):
-        app_bin = self._nodes.get(stream_id, {}).get('application.process.binary', '').lower()
-
         for sink in sinks:
             role = self.get_saved_sink_role(stream_id, sink)
             if role in ('PRIMARY', 'MIRROR') and not self.is_linked(stream_id, sink.id):
                 self.route_stream_to_sink(stream_id, sink.id)
-                self._journal.append(f"# restore {stream_id} → {sink.id} ({role}) [app:{app_bin}]")
+                identity = self.get_stream_identity(stream_id)
+                self._journal.append(
+                    f"# restore {stream_id} → {sink.id} ({role}) "
+                    f"[identity:{identity.get('identity_key', 'unknown')}]"
+                )

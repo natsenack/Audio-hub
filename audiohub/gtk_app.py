@@ -109,6 +109,9 @@ class LinuxAudioManagerApp(Adw.Application):
         self._timers_started = False
         self._timer_ids = []
         self._cleanup_done = False
+        self._settings_window = None
+        self._routing_filter = 'all'
+        self._routing_query = ''
         # Configuration loopback
         import os
         config_dir = os.path.expanduser('~/.config/audio-hub')
@@ -132,6 +135,7 @@ class LinuxAudioManagerApp(Adw.Application):
 
     def on_activate(self, app):
         self._configure_icon_theme()
+        self._apply_color_scheme(self._setting('theme', default='system'))
 
         if not self._css_loaded:
             css = Gtk.CssProvider()
@@ -144,16 +148,11 @@ class LinuxAudioManagerApp(Adw.Application):
             self.window = self._build_window()
             self.window.connect('close-request', self._on_window_close)
 
-        if not self.has_tray_helper():
+        if self._setting('tray', 'enabled', True) and not self.has_tray_helper():
             self._ensure_tray_helper()
 
         if not self._timers_started:
-            self._timer_ids = [
-                GLib.timeout_add(1000, self._restore_loopback_configs),
-                GLib.timeout_add_seconds(5, self._monitor_loopback_links),
-                GLib.timeout_add_seconds(2, self._auto_refresh),
-                GLib.timeout_add(200, self._update_level_bars_only),
-            ]
+            self._start_background_timers()
             self._timers_started = True
 
         self.window.present()
@@ -326,6 +325,248 @@ class LinuxAudioManagerApp(Adw.Application):
 
     # ── Fenêtre ───────────────────────────────────────────────────────────────
 
+    def _setting(self, *keys, default=None):
+        return self.audio.settings.get('preferences', *keys, default=default)
+
+    def _set_setting(self, *args):
+        self.audio.settings.set('preferences', *args)
+
+    def _start_background_timers(self):
+        self._timer_ids = [
+            GLib.timeout_add(1000, self._restore_loopback_configs),
+            GLib.timeout_add_seconds(5, self._monitor_loopback_links),
+            GLib.timeout_add_seconds(int(self._setting('refresh_interval', default=2)), self._auto_refresh),
+            GLib.timeout_add(200, self._update_level_bars_only),
+        ]
+
+    def _restart_background_timers(self):
+        for timer_id in self._timer_ids:
+            try:
+                GLib.source_remove(timer_id)
+            except Exception:
+                pass
+        self._start_background_timers()
+
+    def _apply_color_scheme(self, scheme):
+        manager = Adw.StyleManager.get_default()
+        schemes = {
+            'system': Adw.ColorScheme.DEFAULT,
+            'dark': Adw.ColorScheme.FORCE_DARK,
+            'light': Adw.ColorScheme.FORCE_LIGHT,
+        }
+        manager.set_color_scheme(schemes.get(scheme, Adw.ColorScheme.DEFAULT))
+
+    def _show_settings(self, _button=None):
+        if self._settings_window is not None:
+            self._settings_window.present()
+            return
+
+        win = Adw.PreferencesWindow(transient_for=self.window, modal=True)
+        win.set_title('Paramètres — AudioHub')
+        win.set_default_size(620, 700)
+        self._settings_window = win
+
+        page = Adw.PreferencesPage()
+        general = Adw.PreferencesGroup(title='Général', description='Comportement de l’application')
+
+        tray_row = Adw.SwitchRow(title='Icône dans la barre système',
+                                 subtitle='Afficher AudioHub dans la zone de notification')
+        tray_row.set_active(bool(self._setting('tray', 'enabled', default=True)))
+        tray_row.connect('notify::active', self._on_tray_setting_changed)
+        general.add(tray_row)
+
+        close_row = Adw.SwitchRow(title='Réduire dans la barre système à la fermeture',
+                                  subtitle='Le bouton de fermeture masque la fenêtre au lieu de quitter')
+        close_row.set_active(bool(self._setting('window', 'minimize_on_close', default=True)))
+        close_row.connect('notify::active', lambda row, _pspec:
+                          self._set_setting('window', 'minimize_on_close', row.get_active()))
+        general.add(close_row)
+
+        refresh_row = Adw.ComboRow(title='Actualisation automatique',
+                                   subtitle='Fréquence de lecture des changements PipeWire')
+        refresh_model = Gtk.StringList.new(['1 seconde', '2 secondes', '5 secondes', '10 secondes'])
+        refresh_row.set_model(refresh_model)
+        refresh_values = [1, 2, 5, 10]
+        current_refresh = int(self._setting('refresh_interval', default=2))
+        refresh_row.set_selected(refresh_values.index(current_refresh) if current_refresh in refresh_values else 1)
+        def on_refresh_changed(row, _pspec):
+            value = refresh_values[row.get_selected()]
+            self._set_setting('refresh_interval', value)
+            if self._timers_started:
+                self._restart_background_timers()
+        refresh_row.connect('notify::selected', on_refresh_changed)
+        general.add(refresh_row)
+        page.add(general)
+
+        audio_group = Adw.PreferencesGroup(title='Audio',
+                                           description='Affichage et comportement du mixeur')
+        meters_row = Adw.SwitchRow(title='Afficher les vumètres des microphones',
+                                   subtitle='Afficher le niveau d’entrée en temps réel dans Périphériques')
+        meters_row.set_active(bool(self._setting('audio', 'show_meters', default=True)))
+        meters_row.connect('notify::active', lambda row, _pspec: self._on_meter_setting_changed(row))
+        audio_group.add(meters_row)
+
+        expanded_row = Adw.SwitchRow(title='Mémoriser le flux développé',
+                                     subtitle='Restaurer le dernier flux ouvert dans l’onglet Routage')
+        expanded_row.set_active(bool(self._setting('audio', 'remember_expanded', default=True)))
+        expanded_row.connect('notify::active', lambda row, _pspec:
+                             self._set_setting('audio', 'remember_expanded', row.get_active()))
+        audio_group.add(expanded_row)
+        page.add(audio_group)
+
+        appearance = Adw.PreferencesGroup(title='Apparence', description='Personnaliser le thème visuel')
+        theme_row = Adw.ComboRow(title='Thème')
+        theme_row.set_model(Gtk.StringList.new(['Système', 'Sombre', 'Clair']))
+        theme_values = ['system', 'dark', 'light']
+        current_theme = self._setting('theme', default='system')
+        theme_row.set_selected(theme_values.index(current_theme) if current_theme in theme_values else 0)
+        def on_theme_changed(row, _pspec):
+            value = theme_values[row.get_selected()]
+            self._set_setting('theme', value)
+            self._apply_color_scheme(value)
+        theme_row.connect('notify::selected', on_theme_changed)
+        appearance.add(theme_row)
+        page.add(appearance)
+
+        maintenance = Adw.PreferencesGroup(title='Outils',
+                                           description='Actions rapides pour diagnostiquer et entretenir AudioHub')
+        refresh_action = Adw.ActionRow(title='Rafraîchir PipeWire',
+                                       subtitle='Relire immédiatement les périphériques et les flux')
+        refresh_action_button = Gtk.Button(icon_name='view-refresh-symbolic')
+        refresh_action_button.set_tooltip_text('Rafraîchir maintenant')
+        refresh_action_button.set_valign(Gtk.Align.CENTER)
+        refresh_action_button.connect('clicked', lambda _button: self._on_refresh())
+        refresh_action.add_suffix(refresh_action_button)
+        maintenance.add(refresh_action)
+
+        diagnostic_action = Adw.ActionRow(title='Diagnostic système',
+                                          subtitle='Voir les versions, statistiques et outils disponibles')
+        diagnostic_button = Gtk.Button(icon_name='utilities-system-monitor-symbolic')
+        diagnostic_button.set_tooltip_text('Afficher le diagnostic')
+        diagnostic_button.set_valign(Gtk.Align.CENTER)
+        diagnostic_button.connect('clicked', lambda _button: self._show_diagnostics())
+        diagnostic_action.add_suffix(diagnostic_button)
+        maintenance.add(diagnostic_action)
+
+        folder_action = Adw.ActionRow(title='Dossier de configuration',
+                                      subtitle=str(self.audio.settings._path.parent))
+        folder_button = Gtk.Button(icon_name='folder-open-symbolic')
+        folder_button.set_tooltip_text('Ouvrir le dossier')
+        folder_button.set_valign(Gtk.Align.CENTER)
+        folder_button.connect('clicked', lambda _button: self._open_config_directory())
+        folder_action.add_suffix(folder_button)
+        maintenance.add(folder_action)
+
+        copy_action = Adw.ActionRow(title='Copier le chemin des réglages',
+                                    subtitle=str(self.audio.settings._path))
+        copy_button = Gtk.Button(icon_name='edit-copy-symbolic')
+        copy_button.set_tooltip_text('Copier le chemin')
+        copy_button.set_valign(Gtk.Align.CENTER)
+        copy_button.connect('clicked', lambda _button: self._copy_settings_path())
+        copy_action.add_suffix(copy_button)
+        maintenance.add(copy_action)
+
+        reset_row = Adw.ActionRow(title='Réinitialiser les préférences',
+                                  subtitle='Rétablir le comportement et le thème par défaut')
+        reset_button = Gtk.Button(label='Réinitialiser')
+        reset_button.add_css_class('destructive-action')
+        reset_button.set_valign(Gtk.Align.CENTER)
+        reset_button.connect('clicked', lambda _button: self._reset_preferences(win))
+        reset_row.add_suffix(reset_button)
+        maintenance.add(reset_row)
+        page.add(maintenance)
+        win.add(page)
+        win.connect('close-request', self._on_settings_closed)
+        self._apply_color_scheme(self._setting('theme', default='system'))
+        win.present()
+
+    def _on_meter_setting_changed(self, row):
+        self._set_setting('audio', 'show_meters', row.get_active())
+        if self.window:
+            self._on_refresh()
+
+    def _open_config_directory(self):
+        try:
+            subprocess.Popen(['xdg-open', str(self.audio.settings._path.parent)],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+    def _copy_settings_path(self):
+        if self.window:
+            self.window.get_clipboard().set(str(self.audio.settings._path))
+
+    def _show_diagnostics(self):
+        def version(command):
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, timeout=3)
+                return (result.stdout or result.stderr).strip().splitlines()[0][:100] or 'Indisponible'
+            except Exception:
+                return 'Indisponible'
+
+        stats = self.audio.get_stats()
+        details = '\n'.join([
+            'AudioHub — Diagnostic système',
+            '',
+            f"PipeWire : {version(['pw-cli', '--version'])}",
+            f"WirePlumber : {version(['wpctl', '--version'])}",
+            f"wpctl : {'disponible' if self._command_exists('wpctl') else 'introuvable'}",
+            f"pw-dump : {'disponible' if self._command_exists('pw-dump') else 'introuvable'}",
+            '',
+            f"Sorties audio : {stats['devices']}",
+            f"Flux actifs : {stats['streams']}",
+            f"Liens PipeWire : {stats['links']}",
+            f"Flux cohérents : {stats['coherents']}",
+            '',
+            f"Réglages : {self.audio.settings._path}",
+        ])
+        self._show_text_window('Diagnostic AudioHub', details, 560, 430)
+
+    @staticmethod
+    def _command_exists(command):
+        try:
+            return subprocess.run(['which', command], capture_output=True, timeout=2).returncode == 0
+        except Exception:
+            return False
+
+    def _show_text_window(self, title, text, width=540, height=450):
+        win = Adw.Window(transient_for=self.window, modal=True)
+        win.set_title(title)
+        win.set_default_size(width, height)
+        header = Adw.HeaderBar()
+        view = Gtk.TextView(editable=False, cursor_visible=False, monospace=True)
+        view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        view.set_margin_top(16); view.set_margin_start(16)
+        view.set_margin_end(16); view.set_margin_bottom(16)
+        view.get_buffer().set_text(text)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_child(view); scroll.set_vexpand(True)
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        root.append(header); root.append(scroll)
+        win.set_content(root); win.present()
+
+    def _on_settings_closed(self, _window):
+        self._settings_window = None
+        return False
+
+    def _on_tray_setting_changed(self, row, _pspec):
+        enabled = row.get_active()
+        self._set_setting('tray', 'enabled', enabled)
+        if enabled:
+            self._ensure_tray_helper()
+        else:
+            self._stop_tray_helper()
+
+    def _reset_preferences(self, settings_window):
+        self.audio.settings._data.pop('preferences', None)
+        self.audio.settings.save()
+        self._apply_color_scheme('system')
+        if not self.has_tray_helper():
+            self._ensure_tray_helper()
+        if self._timers_started:
+            self._restart_background_timers()
+        settings_window.close()
+
     def _build_window(self):
         win = Adw.ApplicationWindow(application=self)
         win.set_title('AudioHub')
@@ -339,6 +580,11 @@ class LinuxAudioManagerApp(Adw.Application):
         ref_btn.set_tooltip_text('Rafraîchir les données PipeWire')
         ref_btn.connect('clicked', self._on_refresh)
         hbar.pack_end(ref_btn)
+
+        settings_btn = Gtk.Button(icon_name='preferences-system-symbolic')
+        settings_btn.set_tooltip_text('Ouvrir les paramètres')
+        settings_btn.connect('clicked', self._show_settings)
+        hbar.pack_end(settings_btn)
 
         hide_btn = Gtk.Button(icon_name='window-minimize-symbolic')
         hide_btn.set_tooltip_text("Réduire dans la barre d'état")
@@ -357,9 +603,11 @@ class LinuxAudioManagerApp(Adw.Application):
 
     def _on_close_request(self, win):
         """Minimize to tray on close button, unless Ctrl+Q used."""
-        # Always minimize instead of closing (better UX for system tray apps)
-        win.set_visible(False)
-        return True
+        if self._setting('window', 'minimize_on_close', default=True):
+            win.set_visible(False)
+            return True
+        self._cleanup_background_resources()
+        return False
 
     def _on_refresh(self, _=None):
         self.audio.refresh()
@@ -494,6 +742,8 @@ class LinuxAudioManagerApp(Adw.Application):
         return badge
 
     def _is_stream_expanded(self, stream_id):
+        if not self._setting('audio', 'remember_expanded', default=True):
+            return False
         if self._expanded_stream_id is not None:
             return self._expanded_stream_id == stream_id
         saved = bool(self.audio.settings.get('ui', 'expanded', str(stream_id), default=False))
@@ -519,10 +769,12 @@ class LinuxAudioManagerApp(Adw.Application):
                 button.set_label('▼' if is_expanded else '▶')
                 if button.get_active() != is_expanded:
                     button.set_active(is_expanded)
-                self.audio.settings.set('ui', 'expanded', str(other_stream_id), is_expanded)
+                if self._setting('audio', 'remember_expanded', default=True):
+                    self.audio.settings.set('ui', 'expanded', str(other_stream_id), is_expanded)
 
             if stream_id not in self._stream_expand_widgets:
-                self.audio.settings.set('ui', 'expanded', str(stream_id), expanded)
+                if self._setting('audio', 'remember_expanded', default=True):
+                    self.audio.settings.set('ui', 'expanded', str(stream_id), expanded)
         finally:
             self._expansion_syncing = False
 
@@ -647,7 +899,8 @@ class LinuxAudioManagerApp(Adw.Application):
         # ═══════════════════════════════════════════════════════════════════════
         # SECTION 2: Barre de niveau UNIQUEMENT pour les micros
         # ═══════════════════════════════════════════════════════════════════════
-        if not is_sink and getattr(device, 'is_real_microphone', False):
+        if (not is_sink and getattr(device, 'is_real_microphone', False)
+                and self._setting('audio', 'show_meters', default=True)):
             level_section = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             level_section.set_margin_top(12)
             level_section.set_margin_bottom(10)
@@ -814,6 +1067,20 @@ class LinuxAudioManagerApp(Adw.Application):
         dropdown.connect('notify::selected', on_rate_changed)
         return dropdown
 
+    def _set_routing_query(self, query):
+        if query == self._routing_query:
+            return
+        self._routing_query = query
+        if self.window:
+            self._refresh_dynamic_pages()
+
+    def _set_routing_filter(self, filter_name):
+        if filter_name == self._routing_filter:
+            return
+        self._routing_filter = filter_name
+        if self.window:
+            self._refresh_dynamic_pages()
+
     # ── Onglet Routage ────────────────────────────────────────────────────────
     # ══════════════════════════════════════════════════════════════════════════
 
@@ -821,8 +1088,26 @@ class LinuxAudioManagerApp(Adw.Application):
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         outer.set_vexpand(True)
         sinks   = self.audio.get_sinks()
-        streams = self.audio.get_streams()
+        all_streams = self.audio.get_streams()
         stats   = self.audio.get_stats()
+
+        def matches_filter(stream):
+            identity = self.audio.get_stream_identity(stream.id, stream.name)
+            if self._routing_filter != 'all' and identity.get('kind') != self._routing_filter:
+                return False
+            query = self._routing_query.strip().lower()
+            if not query:
+                return True
+            fields = ('primary', 'secondary', 'family', 'site_name',
+                      'technical_name', 'identity_key', 'raw_title', 'raw_artist')
+            haystack = ' '.join(str(identity.get(key) or '') for key in fields)
+            props = self.audio._nodes.get(stream.id, {})
+            haystack += ' ' + ' '.join(str(props.get(key) or '') for key in (
+                'application.name', 'application.process.binary',
+                'application.desktop_file', 'application.id'))
+            return query in haystack.lower()
+
+        streams = [stream for stream in all_streams if matches_filter(stream)]
 
         # ═══════════════════════════════════════════════════════════════════
         # ── SECTION 1: Titre et statut ────────────────────────────────────
@@ -868,12 +1153,12 @@ class LinuxAudioManagerApp(Adw.Application):
         
         # Boutons d'action
         default_sink = next((s for s in sinks if s.is_default), sinks[0] if sinks else None)
-        if default_sink and streams:
+        if default_sink and all_streams:
             ra_btn = Gtk.Button(label=f'Tout → {default_sink.display_name[:20]}')
             ra_btn.set_tooltip_text(f'Router tous les flux vers {default_sink.display_name}')
-            def _do_route_all(_ds=default_sink, _sts=streams):
+            def _do_route_all(_ds=default_sink, _sts=all_streams):
                 for _st in _sts:
-                    self.audio.route_stream_to_sink(_st.id, _ds.id)
+                    self.audio.set_stream_route(_st.id, _ds.id, 'PRIMARY', sinks)
                 self._on_refresh()
             ra_btn.connect('clicked', lambda _: _do_route_all())
             sbar.append(ra_btn)
@@ -885,6 +1170,30 @@ class LinuxAudioManagerApp(Adw.Application):
         header.append(sbar)
         outer.append(header)
         outer.append(self._sep())
+
+        filter_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        filter_row.set_margin_start(18); filter_row.set_margin_end(18)
+        filter_row.set_margin_top(10); filter_row.set_margin_bottom(8)
+        search = Gtk.SearchEntry()
+        search.set_placeholder_text('Rechercher une application, un site ou un titre…')
+        search.set_text(self._routing_query)
+        search.set_hexpand(True)
+        search.connect('search-changed', lambda entry: self._set_routing_query(entry.get_text()))
+        filter_row.append(search)
+        filter_model = Gtk.StringList.new([
+            'Tous les flux', 'Applications natives', 'Navigateurs',
+            'Webapps / PWA', 'Sites web'
+        ])
+        filter_drop = Gtk.DropDown.new(filter_model, None)
+        filter_values = ['all', 'native_app', 'browser_shell', 'browser_app', 'browser_site']
+        filter_drop.set_selected(filter_values.index(self._routing_filter))
+        filter_drop.set_tooltip_text('Filtrer par type d’identité')
+        filter_drop.connect(
+            'notify::selected',
+            lambda drop, _pspec: self._set_routing_filter(filter_values[drop.get_selected()]),
+        )
+        filter_row.append(filter_drop)
+        outer.append(filter_row)
 
         # ═══════════════════════════════════════════════════════════════════
         # ── SECTION 2: Légende des rôles ─────────────────────────────────
@@ -916,7 +1225,8 @@ class LinuxAudioManagerApp(Adw.Application):
         content_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         content_header.set_margin_start(18); content_header.set_margin_end(18)
         content_header.set_margin_top(10); content_header.set_margin_bottom(6)
-        ch_lbl = Gtk.Label(); ch_lbl.set_markup(f'<small><b>Flux détectés ({len(streams)})</b></small>')
+        ch_lbl = Gtk.Label(); ch_lbl.set_markup(
+            f'<small><b>Flux visibles ({len(streams)} / {len(all_streams)})</b></small>')
         ch_lbl.add_css_class('dim-label')
         content_header.append(ch_lbl)
         outer.append(content_header)
@@ -1179,6 +1489,10 @@ class LinuxAudioManagerApp(Adw.Application):
             f'classification.kind:  {identity["kind"]}\n'
             f'classification.label: {identity["kind_label"]}\n'
             f'classification.family:{identity.get("family","")}\n'
+            f'classification.identity:{identity.get("identity_key", "")}\n'
+            f'classification.confidence:{identity.get("confidence", "")}\n'
+            f'application.display: {identity.get("app_name", "")}\n'
+            f'application.site:    {identity.get("site_name", "")}\n'
             f'application.name:   {_np.get("application.name","")}\n'
             f'application.binary: {_np.get("application.process.binary","")}\n'
             f'application.desktop:{_np.get("application.desktop_file","") or _np.get("application.id","")}\n'
@@ -1246,8 +1560,7 @@ class LinuxAudioManagerApp(Adw.Application):
             return saved
         if sink.is_muted: return 'idle'
         if primary and sink.id == primary.id: return 'PRIMARY'
-        connected = any(sink.display_name in c.sink_name or sink.nick in c.sink_name
-                        for c in stream.connections)
+        connected = self.audio.is_linked(stream.id, sink.id)
         return 'MIRROR' if connected else 'idle'
 
     # ── Entrée de sink (ligne dans la carte flux) ─────────────────────────────
@@ -1321,21 +1634,11 @@ class LinuxAudioManagerApp(Adw.Application):
             elif new_role == 'idle': d.set_markup('<span color="gray">●</span>')
             else: d.set_markup('<span color="green">●</span>')
             dvl.set_markup(f'<small>{s.volume_pct}</small>' if new_role != 'idle' else '')
-            app_bin = am._nodes.get(st.id, {}).get('application.process.binary', '').lower()
-            am.save_sink_role(st.id, s, new_role, app_bin)
-            # Appliquer le routage PipeWire
-            if new_role == 'PRIMARY':
-                # Désactiver les autres sinks
-                for other in sl:
-                    if other.id != s.id:
-                        am.save_sink_role(st.id, other, 'idle', app_bin)
-                        am.unroute_stream_from_sink(st.id, other.id)
-                am.route_stream_to_sink(st.id, s.id)
-                GLib.idle_add(rb)
-            elif new_role == 'MIRROR':
-                am.route_stream_to_sink(st.id, s.id)
-            else:
-                am.unroute_stream_from_sink(st.id, s.id)
+            # Toutes les décisions passent par le contrôleur central :
+            # l'exclusivité de Primaire, les miroirs et la persistance sont
+            # ainsi identiques quel que soit le bouton utilisé.
+            am.set_stream_route(st.id, s.id, new_role, sl)
+            GLib.idle_add(rb)
 
         # Connexion des boutons de rôle
         _lock = [False]
