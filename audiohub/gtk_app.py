@@ -357,6 +357,10 @@ class LinuxAudioManagerApp(Adw.Application):
         """Réinitialise un curseur au double-clic."""
         gesture = Gtk.GestureClick()
         gesture.set_button(1)
+        # Gtk.Scale possède déjà ses propres gestionnaires de clics. En phase
+        # CAPTURE, le geste reçoit le double-clic avant que le curseur ne le
+        # consomme.
+        gesture.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
 
         def on_pressed(_gesture, n_press, _x, _y):
             if n_press == 2:
