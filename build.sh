@@ -77,7 +77,7 @@ Package: ${PACKAGE_NAME}
 Version: ${VERSION}
 Architecture: ${ARCH}
 Maintainer: AudioHub <local>
-Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-4.0, gir1.2-adwaita-1, pipewire, wireplumber
+Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, pipewire, wireplumber
 Description: Application AudioHub — Routage PipeWire
  Interface GTK4 complète pour routage audio avancé avec PipeWire.
  .

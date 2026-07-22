@@ -25,30 +25,50 @@ from .pipewire import AudioManager
 
 _CSS = b"""
 .journal-mono     { font-family: monospace; font-size: 9pt; }
+.dim-label        { color: @view_fg_color; opacity: 0.86; }
+.card             { background-color: @card_bg_color;
+                    color: @card_fg_color; border: 1px solid @borders;
+                    border-radius: 10px; }
 .role-badge       { border-radius: 12px; padding: 2px 10px;
                     font-size: 9pt; font-weight: bold; min-height: 0; }
-.role-primary     { background: alpha(@accent_color, 0.20); color: @accent_color; }
-.role-mirror      { background: alpha(@warning_color, 0.20); color: @warning_color; }
+.role-primary     { background: alpha(@accent_bg_color, 0.32);
+                    color: @accent_fg_color; }
+.role-mirror      { background: alpha(@warning_bg_color, 0.34);
+                    color: @warning_fg_color; }
 .role-idle        { background: alpha(@borders, 0.35);
-                    color: alpha(@card_fg_color, 0.40); }
+                    color: alpha(@card_fg_color, 0.78); }
 .device-name      { font-size: 11pt; font-weight: bold; }
-.stat-badge       { border-radius: 6px; padding: 2px 8px; font-size: 9pt; }
+.stat-badge       { border-radius: 6px; padding: 2px 8px; font-size: 9pt;
+                    background: alpha(@accent_bg_color, 0.18);
+                    color: @view_fg_color; }
 .stream-vol-label { font-size: 11pt; font-weight: bold; color: @accent_color; }
-.note-lbl         { font-size: 8.5pt; opacity: 0.60; }
+.note-lbl         { font-size: 8.5pt; color: @view_fg_color; opacity: 0.90; }
 .default-badge    { color: @warning_color; font-weight: bold; font-size: 9pt; }
-.pop-section-lbl  { font-size: 8pt; font-weight: bold; opacity: 0.50;
+.pop-section-lbl  { font-size: 8pt; font-weight: bold; color: @view_fg_color;
+                    opacity: 0.90;
                     margin-top: 6px; margin-bottom: 3px; }
 .pop-action-btn   { border-radius: 6px; padding: 4px 8px; }
 .browser-title    { font-style: italic; }
+.routing-header   { background: @view_bg_color; border-bottom: 1px solid @borders; }
+.stat-badge-routing { padding: 4px 10px; border-radius: 6px;
+                      border: 1px solid @borders; font-weight: 600;
+                      color: @view_fg_color; }
+.stat-badge-routing.accent { background: alpha(@accent_bg_color, 0.22);
+                             border-color: alpha(@accent_bg_color, 0.55); }
+.stat-badge-routing.success { background: alpha(@success_bg_color, 0.24);
+                              border-color: alpha(@success_bg_color, 0.60); }
+.stat-badge-routing.warning { background: alpha(@warning_bg_color, 0.24);
+                              border-color: alpha(@warning_bg_color, 0.60); }
 .stream-hdr-ctrls { padding: 4px 14px 8px 14px; }
-.sink-row         { border-radius: 6px; }
-.sink-row:hover   { background: alpha(@card_fg_color, 0.05); }
+.sink-row         { border-radius: 6px; color: @card_fg_color; }
+.sink-row:hover   { background: alpha(@card_fg_color, 0.10); }
 .options-btn      { min-width: 32px; padding: 4px 8px; font-size: 11pt; }
 .mic-level-label  { font-size: 8.5pt; opacity: 0.70; margin-bottom: 2px; }
 .mic-level-bar    { min-height: 14px; }
 progressbar { min-height: 14px; border-radius: 3px; }
-progressbar trough { min-height: 14px; border-radius: 3px; background-color: alpha(@borders, 0.3); }
-progressbar progress { background-color: @accent_color; border-radius: 3px; }
+progressbar trough { min-height: 14px; border-radius: 3px;
+                      background-color: alpha(@borders, 0.60); }
+progressbar progress { background-color: @accent_bg_color; border-radius: 3px; }
 """
 
 # ─── Browsers connus ──────────────────────────────────────────────────────────
@@ -331,6 +351,19 @@ class LinuxAudioManagerApp(Adw.Application):
 
     def _set_setting(self, *args):
         self.audio.settings.set('preferences', *args)
+
+    @staticmethod
+    def _add_slider_double_click(slider, reset_value):
+        """Réinitialise un curseur au double-clic."""
+        gesture = Gtk.GestureClick()
+        gesture.set_button(1)
+
+        def on_pressed(_gesture, n_press, _x, _y):
+            if n_press == 2:
+                slider.set_value(reset_value)
+
+        gesture.connect('pressed', on_pressed)
+        slider.add_controller(gesture)
 
     def _start_background_timers(self):
         self._timer_ids = [
@@ -1015,16 +1048,18 @@ class LinuxAudioManagerApp(Adw.Application):
         vol_lbl = Gtk.Label(); vol_lbl.set_size_request(56, -1); vol_lbl.set_halign(Gtk.Align.END)
         vol_lbl.set_text('🔇' if device.is_muted else device.volume_pct)
         
-        adj = Gtk.Adjustment(value=device.volume, lower=0.0, upper=1.0,
+        adj = Gtk.Adjustment(value=min(2.0, max(0.0, device.volume)), lower=0.0, upper=2.0,
                               step_increment=0.01, page_increment=0.1, page_size=0.0)
         vs = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
         vs.set_draw_value(False); vs.set_hexpand(True)
+        vs.set_tooltip_text('Volume (0–200 %) — double-clic : 100 %')
         
         def on_dv(sc, d=device, vl=vol_lbl):
             v=sc.get_value(); d.volume=v; vl.set_text(f'{int(v*100)}%')
             self.audio.set_volume(d.id, v)
         
         vs.connect('value-changed', on_dv)
+        self._add_slider_double_click(vs, 1.0)
         ctrl.append(vol_lbl); ctrl.append(vs)
         
         mute_btn = Gtk.ToggleButton(icon_name='audio-volume-muted-symbolic')
@@ -1462,16 +1497,17 @@ class LinuxAudioManagerApp(Adw.Application):
         sv_lbl = Gtk.Label(label=f'{int(sv_val*100)}%')
         sv_lbl.set_size_request(40, -1); sv_lbl.set_halign(Gtk.Align.END)
         sv_lbl.add_css_class('stream-vol-label')
-        adj_sv = Gtk.Adjustment(value=sv_val, lower=0.0, upper=1.5,
+        adj_sv = Gtk.Adjustment(value=min(2.0, max(0.0, sv_val)), lower=0.0, upper=2.0,
                                  step_increment=0.01, page_increment=0.1, page_size=0.0)
         sv_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj_sv)
         sv_slider.set_draw_value(False); sv_slider.set_size_request(140, -1)
-        sv_slider.set_tooltip_text('Volume du flux  (0–150 %)')
+        sv_slider.set_tooltip_text('Volume du flux (0–200 %) — double-clic : 100 %')
         def on_sv(sc, st=stream, vl=sv_lbl):
             v=sc.get_value(); st.volume=v; vl.set_text(f'{int(v*100)}%')
             sett.set('stream_volume', str(st.id), round(v, 4))
             self.audio.set_stream_volume(st.id, v)
         sv_slider.connect('value-changed', on_sv)
+        self._add_slider_double_click(sv_slider, 1.0)
         row2.append(sv_slider); row2.append(sv_lbl)
         sv_mute = Gtk.ToggleButton(icon_name='audio-volume-muted-symbolic')
         sv_mute.set_tooltip_text('Muet le flux')
@@ -1488,7 +1524,7 @@ class LinuxAudioManagerApp(Adw.Application):
                                   step_increment=0.01, page_increment=0.1, page_size=0.0)
         bal_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj_bal)
         bal_slider.set_draw_value(False); bal_slider.set_size_request(130, -1)
-        bal_slider.set_tooltip_text('Balance gauche/droite  (centre = 0.50)')
+        bal_slider.set_tooltip_text('Balance gauche/droite (centre = 0.50) — double-clic : centrer')
 
         saved_mode = sett.get('stream_mode', str(stream.id), default='Stéréo')
         _cur_mode  = [saved_mode]  # mutable pour closure
@@ -1499,6 +1535,7 @@ class LinuxAudioManagerApp(Adw.Application):
             current_vol = vol_slider.get_value()
             self.audio.apply_stream_params(st.id, b, m[0], current_vol)
         bal_slider.connect('value-changed', on_bal)
+        self._add_slider_double_click(bal_slider, 0.5)
         row2.append(bal_slider)
 
         ctr_btn = Gtk.Button(label='C'); ctr_btn.add_css_class('flat')
@@ -1809,14 +1846,16 @@ class LinuxAudioManagerApp(Adw.Application):
         vol_row.set_margin_top(4)
         vol_lbl = Gtk.Label(label=sink.volume_pct)
         vol_lbl.set_size_request(48, -1); vol_lbl.set_halign(Gtk.Align.END)
-        adj = Gtk.Adjustment(value=sink.volume, lower=0.0, upper=1.0,
+        adj = Gtk.Adjustment(value=min(2.0, max(0.0, sink.volume)), lower=0.0, upper=2.0,
                               step_increment=0.01, page_increment=0.1, page_size=0.0)
         pvs = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
         pvs.set_draw_value(False); pvs.set_hexpand(True)
+        pvs.set_tooltip_text('Volume (0–200 %) — double-clic : 100 %')
         def on_pvol(sc, s=sink, vl=vol_lbl):
             v=sc.get_value(); s.volume=v; vl.set_text(f'{int(v*100)}%')
             self.audio.set_volume(s.id, v)
         pvs.connect('value-changed', on_pvol)
+        self._add_slider_double_click(pvs, 1.0)
         vol_row.append(vol_lbl); vol_row.append(pvs)
         vbox.append(vol_row); vbox.append(self._sep())
 

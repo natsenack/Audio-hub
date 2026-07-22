@@ -244,10 +244,10 @@ class AudioManager(BrowserStreamIdentityMixin):
 
     def _boost_weak_input_volumes(self):
         for source in self._sources:
-            if source.volume > 1.2:
+            if source.volume > 2.0:
                 try:
                     subprocess.run(
-                        ['wpctl', 'set-volume', str(source.id), '1.0'],
+                        ['wpctl', 'set-volume', str(source.id), '2.0'],
                         capture_output=True,
                         timeout=2,
                     )
