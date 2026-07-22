@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_NAME="audio-hub"
-VERSION="${VERSION:-${DEB_VERSION:-1.0.0}}"
+VERSION="${VERSION:-${DEB_VERSION:-1.0.6}}"
 ARCH="all"
 BUILD_DIR="${ROOT_DIR}/build"
 STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/audio-hub-deb.XXXXXX")"
@@ -16,7 +16,7 @@ if [[ ! -f "${ROOT_DIR}/audio-hub.py" ]]; then
     exit 1
 fi
 
-if [[ ! -f "${ROOT_DIR}/data/audio-hub.desktop" ]]; then
+if [[ ! -f "${ROOT_DIR}/data/com.audiohub.AudioHub.desktop" ]]; then
     echo "❌ Fichier desktop introuvable" >&2
     exit 1
 fi
@@ -57,7 +57,8 @@ install -m 644 "${ROOT_DIR}/audiohub/models.py" "${STAGING_DIR}/usr/share/${PACK
 install -m 644 "${ROOT_DIR}/audiohub/paths.py" "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/audiohub/"
 install -m 644 "${ROOT_DIR}/audiohub/pipewire.py" "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/audiohub/"
 install -m 644 "${ROOT_DIR}/tray_helper.py" "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/"
-install -m 644 "${ROOT_DIR}/data/audio-hub.desktop" "${STAGING_DIR}/usr/share/applications/"
+install -m 644 "${ROOT_DIR}/data/com.audiohub.AudioHub.desktop" \
+    "${STAGING_DIR}/usr/share/applications/"
 install -m 644 "${ROOT_DIR}/data/com.audiohub.audiohub.metainfo.xml" \
     "${STAGING_DIR}/usr/share/metainfo/"
 install -m 644 "${ROOT_DIR}/data/icons/audio-hub.svg" \

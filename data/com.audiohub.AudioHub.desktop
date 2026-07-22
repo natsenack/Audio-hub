@@ -6,4 +6,5 @@ Exec=audio-hub
 Icon=audio-hub
 Categories=AudioVideo;
 Terminal=false
+StartupWMClass=com.audiohub.AudioHub
 Keywords=audio;pipewire;routing;volume;

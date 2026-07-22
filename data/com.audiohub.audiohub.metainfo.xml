@@ -15,12 +15,12 @@
       de votre choix et de contrôler les volumes depuis une interface GTK.
     </p>
   </description>
-  <launchable type="desktop-id">audio-hub.desktop</launchable>
+  <launchable type="desktop-id">com.audiohub.AudioHub.desktop</launchable>
   <url type="homepage">https://github.com/pcsec/audio-hub</url>
   <icon type="stock">audio-hub</icon>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="1.0.0" date="2026-07-22"/>
+    <release version="1.0.6" date="2026-07-22"/>
   </releases>
   <provides>
     <binary>audio-hub</binary>

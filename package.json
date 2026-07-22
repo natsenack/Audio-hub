@@ -1,6 +1,6 @@
 {
   "name": "audio-hub",
-  "version": "1.0.0",
+  "version": "1.0.6",
   "description": "GTK4 audio manager + GNOME Shell extension for PipeWire",
   "main": "audio-hub.py",
   "scripts": {

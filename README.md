@@ -32,7 +32,7 @@ audio-hub/
 ├── stylesheet.css
 ├── tray_helper.py
 └── data/
-    ├── audio-hub.desktop
+    ├── com.audiohub.AudioHub.desktop
     └── icons/
 ```
 

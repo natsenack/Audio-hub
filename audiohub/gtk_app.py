@@ -14,7 +14,6 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 from .models import PipeWireSink, PipeWireSource, PipeWireStream
@@ -25,9 +24,99 @@ from .pipewire import AudioManager
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 
 _CSS = b"""
+window, dialog { background-color: @window_bg_color; color: @window_fg_color; }
+headerbar { min-height: 46px; padding: 0 10px; background: @headerbar_bg_color;
+            color: @headerbar_fg_color; border-bottom: 1px solid @borders;
+            box-shadow: none; }
+notebook { background: @view_bg_color; }
+notebook > header { background: @headerbar_bg_color; border-bottom: none;
+                     box-shadow: none; margin-bottom: 0; }
+notebook > header > tabs { border-bottom: 1px solid @borders; }
+notebook > header > tabs > tab { min-height: 34px; padding: 5px 14px;
+                                 color: alpha(@headerbar_fg_color, 0.78); }
+notebook > header > tabs > tab:hover { background: alpha(@accent_bg_color, 0.10); }
+notebook > header > tabs > tab:checked { color: @accent_color;
+                                         border-bottom: 2px solid @accent_color; }
+notebook > stack, scrolledwindow, viewport { background: @view_bg_color;
+                                             border: none; box-shadow: none; }
 .journal-mono     { font-family: monospace; font-size: 9pt; }
-.dim-label        { color: @view_fg_color; opacity: 0.86; }
-.card             { background-color: @card_bg_color;
+.app-shell        { background: @view_bg_color; }
+.app-headerbar    { background: @headerbar_bg_color; border-bottom: 1px solid @borders;
+                    box-shadow: 0 1px 8px alpha(@shade_color, 0.18); }
+.content-page     { background: @view_bg_color; }
+.content-section  { margin-bottom: 18px; }
+.section-title    { color: @view_fg_color; font-size: 10.5pt; font-weight: 700;
+                    letter-spacing: 0.2px; }
+.device-list, .stream-list { background: transparent; border: none; }
+.device-row       { background: @card_bg_color; border-bottom: 1px solid @borders; }
+.device-row:first-child { border-radius: 10px 10px 0 0; }
+.device-row:last-child  { border-radius: 0 0 10px 10px; border-bottom: none; }
+.device-row:only-child  { border-radius: 10px; }
+.device-row:hover { background: alpha(@accent_bg_color, 0.07); }
+.device-card      { padding: 2px; }
+.stream-list > .stream-card { background: @card_bg_color; border: 1px solid @borders;
+                               border-radius: 10px; }
+.stream-card:hover { border-color: alpha(@accent_color, 0.50); }
+.filter-bar       { padding: 8px; background: @card_bg_color;
+                    border: 1px solid @borders; border-radius: 10px; }
+.dim-label        { color: @view_fg_color; opacity: 0.90; }
+label.heading     { color: @view_fg_color; font-weight: 700; }
+label.title-large { color: @view_fg_color; font-size: 1.15em; font-weight: 700; }
+button             { min-width: 0; min-height: 26px; padding: 3px 9px;
+                     border-radius: 7px; font-size: 9pt; }
+button:not(.flat):not(.reset-slider-button) { background: @card_bg_color;
+                                               color: @card_fg_color;
+                                               border: none; box-shadow: none; }
+button.flat        { min-height: 26px; padding: 3px 8px; }
+.header-action     { min-width: 30px; min-height: 30px; padding: 0;
+                     background: transparent; border: none; border-radius: 7px; }
+.header-action:hover { background: alpha(@headerbar_fg_color, 0.12); }
+headerbar button.header-action,
+headerbar button.header-action:hover,
+headerbar button.header-action:active,
+headerbar button.header-action:checked,
+headerbar windowcontrols button,
+headerbar windowcontrols button:hover,
+headerbar windowcontrols button:active { background: transparent; border: none;
+                                         box-shadow: none; outline: none; }
+button:hover       { background: alpha(@accent_bg_color, 0.14); }
+button:active      { background: alpha(@accent_bg_color, 0.24); }
+button.destructive-action { min-height: 28px; padding: 4px 10px; }
+entry, searchentry { min-height: 32px; padding: 5px 10px; border-radius: 8px;
+                     background: @card_bg_color; color: @card_fg_color;
+                     border: 1px solid @borders; }
+entry:focus, searchentry:focus-within { border-color: @accent_color;
+                                        box-shadow: 0 0 0 2px alpha(@accent_color, 0.22); }
+dropdown > button, combobox > button { min-height: 30px; padding: 4px 9px;
+                                       background: @card_bg_color; color: @card_fg_color;
+                                       border: 1px solid @borders; }
+popover { background: @popover_bg_color; color: @popover_fg_color;
+          border: 1px solid @borders; border-radius: 10px; }
+separator { background: @borders; min-height: 1px; min-width: 1px; }
+list, listview, .boxed-list { background: @card_bg_color; color: @card_fg_color;
+                               border: 1px solid @borders; border-radius: 10px; }
+list > row, listview > row { min-height: 40px; border-bottom: 1px solid alpha(@borders, 0.65); }
+list > row:last-child, listview > row:last-child { border-bottom: none; }
+list > row:hover, listview > row:hover { background: alpha(@accent_bg_color, 0.08); }
+scale { min-height: 24px; }
+scale trough { min-height: 6px; border-radius: 6px; background: alpha(@borders, 0.72); }
+scale highlight { min-height: 6px; border-radius: 6px; background: @accent_bg_color; }
+scale slider { min-width: 18px; min-height: 18px; border-radius: 50%;
+               background: @accent_bg_color; border: 2px solid @accent_fg_color; }
+scale slider:hover { background: @accent_color; }
+scrollbar { background: transparent; }
+scrollbar.vertical { min-width: 10px; }
+scrollbar.horizontal { min-height: 10px; }
+scrollbar.vertical trough, scrollbar.horizontal trough { background: transparent;
+                                                         border: none; }
+scrollbar.vertical slider, scrollbar.horizontal slider,
+scrollbar.vertical > trough > slider, scrollbar.horizontal > trough > slider {
+    min-width: 6px; min-height: 6px; margin: 2px; border: none;
+    border-radius: 6px; background: alpha(@view_fg_color, 0.34); }
+scrollbar.vertical slider:hover, scrollbar.horizontal slider:hover,
+scrollbar.vertical > trough > slider:hover, scrollbar.horizontal > trough > slider:hover {
+    background: alpha(@view_fg_color, 0.58); }
+.card             { background-color: alpha(@card_bg_color, 0.92);
                     color: @card_fg_color; border: 1px solid @borders;
                     border-radius: 10px; }
 .role-badge       { border-radius: 12px; padding: 2px 10px;
@@ -64,6 +153,12 @@ _CSS = b"""
 .sink-row         { border-radius: 6px; color: @card_fg_color; }
 .sink-row:hover   { background: alpha(@card_fg_color, 0.10); }
 .options-btn      { min-width: 32px; padding: 4px 8px; font-size: 11pt; }
+.reset-slider-button { min-width: 72px; min-height: 26px; padding: 3px 7px;
+                       border: none; border-radius: 6px;
+                       background: alpha(@card_fg_color, 0.08); color: @card_fg_color;
+                       font-size: 8.5pt; font-weight: 600; }
+.reset-slider-button:hover { background: @accent_bg_color;
+                             color: @accent_fg_color; }
 .mic-level-label  { font-size: 8.5pt; opacity: 0.70; margin-bottom: 2px; }
 .mic-level-bar    { min-height: 14px; }
 progressbar { min-height: 14px; border-radius: 3px; }
@@ -132,6 +227,8 @@ class LinuxAudioManagerApp(Adw.Application):
         self._timers_started = False
         self._timer_ids = []
         self._cleanup_done = False
+        self._slider_dragging = 0
+        self._refresh_deferred = False
         self._background_start_requested = False
         self._settings_window = None
         self._routing_filter = 'all'
@@ -219,6 +316,9 @@ class LinuxAudioManagerApp(Adw.Application):
 
     def _auto_refresh(self) -> bool:
         """Détecte les changements PipeWire sans reconstruire les onglets."""
+        if self._slider_dragging:
+            self._refresh_deferred = True
+            return True
         try:
             self.audio.refresh()
             if not self.window or not self.window.get_visible():
@@ -354,27 +454,33 @@ class LinuxAudioManagerApp(Adw.Application):
         self.audio.settings.set('preferences', *args)
 
     @staticmethod
-    def _add_slider_double_click(slider, reset_value):
-        """Réinitialise un curseur au double-clic."""
+    def _make_slider_reset_button(slider, reset_value, label, tooltip):
+        """Crée un bouton explicite de remise à zéro d'un curseur."""
+        button = Gtk.Button(label=label)
+        button.add_css_class('reset-slider-button')
+        button.set_size_request(72, -1)
+        button.set_tooltip_text(tooltip)
+        button.connect('clicked', lambda _button: slider.set_value(reset_value))
+        return button
+
+    def _track_slider_interaction(self, slider):
+        """Évite de reconstruire un curseur pendant son déplacement."""
         gesture = Gtk.GestureClick()
         gesture.set_button(1)
-        # Gtk.Scale possède déjà ses propres gestionnaires de clics. En phase
-        # CAPTURE, le geste reçoit le double-clic avant que le curseur ne le
-        # consomme.
         gesture.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         gesture.set_exclusive(False)
-        last_click = [0.0]
 
-        def on_pressed(_gesture, n_press, _x, _y):
-            now = time.monotonic()
-            # Ne pas dépendre uniquement de n_press : certaines versions de
-            # GTK/Adwaita le réinitialisent quand Gtk.Scale consomme le geste.
-            is_double_click = n_press >= 2 or now - last_click[0] <= 0.45
-            last_click[0] = 0.0 if is_double_click else now
-            if is_double_click:
-                slider.set_value(reset_value)
+        def on_pressed(_gesture, _n_press, _x, _y):
+            self._slider_dragging += 1
+
+        def on_released(_gesture, _n_press, _x, _y):
+            self._slider_dragging = max(0, self._slider_dragging - 1)
+            if self._slider_dragging == 0 and self._refresh_deferred:
+                self._refresh_deferred = False
+                GLib.idle_add(lambda: self._on_refresh() or False)
 
         gesture.connect('pressed', on_pressed)
+        gesture.connect('released', on_released)
         slider.add_controller(gesture)
 
     def _start_background_timers(self):
@@ -678,19 +784,24 @@ class LinuxAudioManagerApp(Adw.Application):
         win.connect('close-request', self._on_close_request)
 
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        main_box.add_css_class('app-shell')
         hbar = Gtk.HeaderBar()
+        hbar.add_css_class('app-headerbar')
 
         ref_btn = Gtk.Button(icon_name='view-refresh-symbolic')
+        ref_btn.add_css_class('header-action')
         ref_btn.set_tooltip_text('Rafraîchir les données PipeWire')
         ref_btn.connect('clicked', self._on_refresh)
         hbar.pack_end(ref_btn)
 
         settings_btn = Gtk.Button(icon_name='preferences-system-symbolic')
+        settings_btn.add_css_class('header-action')
         settings_btn.set_tooltip_text('Ouvrir les paramètres')
         settings_btn.connect('clicked', self._show_settings)
         hbar.pack_end(settings_btn)
 
         hide_btn = Gtk.Button(icon_name='window-minimize-symbolic')
+        hide_btn.add_css_class('header-action')
         hide_btn.set_tooltip_text("Réduire dans la barre d'état")
         hide_btn.connect('clicked', lambda _: self.window.set_visible(False))
         hbar.pack_end(hide_btn)
@@ -725,6 +836,9 @@ class LinuxAudioManagerApp(Adw.Application):
         return False
 
     def _on_refresh(self, _=None):
+        if self._slider_dragging:
+            self._refresh_deferred = True
+            return
         self.audio.refresh()
         self._last_refresh_fingerprint = self._build_refresh_fingerprint()
         self._refresh_dynamic_pages()
@@ -735,12 +849,17 @@ class LinuxAudioManagerApp(Adw.Application):
             'routing': Gtk.Box(orientation=Gtk.Orientation.VERTICAL),
             'about': Gtk.Box(orientation=Gtk.Orientation.VERTICAL),
         }
+        for host in self._page_hosts.values():
+            host.add_css_class('content-page')
         self.notebook.append_page(self._page_hosts['devices'], Gtk.Label(label='🔊 Périphériques'))
         self.notebook.append_page(self._page_hosts['routing'], Gtk.Label(label='🔁 Routage'))
         self.notebook.append_page(self._page_hosts['about'], Gtk.Label(label='ℹ️ À propos'))
         self._refresh_dynamic_pages()
 
     def _refresh_dynamic_pages(self):
+        if self._slider_dragging:
+            self._refresh_deferred = True
+            return False
         self._set_page_content('devices', self._build_devices_page())
         self._set_page_content('routing', self._build_routing_page())
         self._set_page_content('about', self._build_about_page())
@@ -902,6 +1021,7 @@ class LinuxAudioManagerApp(Adw.Application):
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scroll.set_vexpand(True)
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        page.add_css_class('content-page')
         page.set_margin_top(18); page.set_margin_start(22)
         page.set_margin_end(22); page.set_margin_bottom(18)
 
@@ -910,8 +1030,9 @@ class LinuxAudioManagerApp(Adw.Application):
 
         def section(title, items, is_sink):
             grp = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            grp.add_css_class('content-section')
             tl = Gtk.Label(); tl.set_markup(f'<b>{title}</b>')
-            tl.set_halign(Gtk.Align.START); tl.add_css_class('heading')
+            tl.set_halign(Gtk.Align.START); tl.add_css_class('section-title')
             tl.set_margin_bottom(6); grp.append(tl)
             if not items:
                 el = Gtk.Label(label='Aucun périphérique détecté.')
@@ -919,7 +1040,7 @@ class LinuxAudioManagerApp(Adw.Application):
                 grp.append(el); return grp
             lb = Gtk.ListBox()
             lb.set_selection_mode(Gtk.SelectionMode.NONE)
-            lb.add_css_class('boxed-list')
+            lb.add_css_class('device-list')
             for item in items: lb.append(self._make_device_card(item, is_sink))
             grp.append(lb); return grp
 
@@ -931,7 +1052,9 @@ class LinuxAudioManagerApp(Adw.Application):
     def _make_device_card(self, device, is_sink: bool):
         """Crée une carte de périphérique avec tous les contrôles et la barre de niveau."""
         row = Gtk.ListBoxRow(); row.set_activatable(False); row.set_selectable(False)
+        row.add_css_class('device-row')
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        outer.add_css_class('device-card')
         outer.set_margin_top(16); outer.set_margin_start(16)
         outer.set_margin_end(16); outer.set_margin_bottom(16)
 
@@ -1064,15 +1187,20 @@ class LinuxAudioManagerApp(Adw.Application):
                               step_increment=0.01, page_increment=0.1, page_size=0.0)
         vs = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
         vs.set_draw_value(False); vs.set_hexpand(True)
-        vs.set_tooltip_text('Volume (0–200 %) — double-clic : 100 %')
+        vs.set_tooltip_text('Volume (0–200 %)')
+        vs.add_mark(0.0, Gtk.PositionType.BOTTOM, '0 %')
+        vs.add_mark(1.0, Gtk.PositionType.BOTTOM, '100 %')
+        vs.add_mark(2.0, Gtk.PositionType.BOTTOM, '200 %')
         
         def on_dv(sc, d=device, vl=vol_lbl):
             v=sc.get_value(); d.volume=v; vl.set_text(f'{int(v*100)}%')
             self.audio.set_volume(d.id, v)
         
         vs.connect('value-changed', on_dv)
-        self._add_slider_double_click(vs, 1.0)
+        self._track_slider_interaction(vs)
         ctrl.append(vol_lbl); ctrl.append(vs)
+        ctrl.append(self._make_slider_reset_button(
+            vs, 1.0, '↺ 100 %', 'Remettre le volume à 100 %'))
         
         mute_btn = Gtk.ToggleButton(icon_name='audio-volume-muted-symbolic')
         mute_btn.set_active(device.is_muted); mute_btn.set_tooltip_text('Muet / Rétablir')
@@ -1203,6 +1331,7 @@ class LinuxAudioManagerApp(Adw.Application):
 
     def _build_routing_page(self):
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        outer.add_css_class('content-page')
         outer.set_vexpand(True)
         sinks   = self.audio.get_sinks()
         all_streams = self.audio.get_streams()
@@ -1289,6 +1418,7 @@ class LinuxAudioManagerApp(Adw.Application):
         outer.append(self._sep())
 
         filter_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        filter_row.add_css_class('filter-bar')
         filter_row.set_margin_start(18); filter_row.set_margin_end(18)
         filter_row.set_margin_top(10); filter_row.set_margin_bottom(8)
         search = Gtk.SearchEntry()
@@ -1353,6 +1483,7 @@ class LinuxAudioManagerApp(Adw.Application):
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scroll.set_vexpand(True)
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        content.add_css_class('stream-list')
         content.set_margin_top(6); content.set_margin_start(18)
         content.set_margin_end(18); content.set_margin_bottom(14)
 
@@ -1410,7 +1541,7 @@ class LinuxAudioManagerApp(Adw.Application):
         primary = self.audio.get_primary_sink(stream)
 
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        card.add_css_class('card')
+        card.add_css_class('stream-card')
 
         # ══ LIGNE 1 : Identité du flux ════════════════════════════════════
         identity = self.audio.get_stream_identity(stream.id, stream.name)
@@ -1513,14 +1644,17 @@ class LinuxAudioManagerApp(Adw.Application):
                                  step_increment=0.01, page_increment=0.1, page_size=0.0)
         sv_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj_sv)
         sv_slider.set_draw_value(False); sv_slider.set_size_request(140, -1)
-        sv_slider.set_tooltip_text('Volume du flux (0–200 %) — double-clic : 100 %')
+        sv_slider.set_tooltip_text('Volume du flux (0–200 %)')
         def on_sv(sc, st=stream, vl=sv_lbl):
             v=sc.get_value(); st.volume=v; vl.set_text(f'{int(v*100)}%')
             sett.set('stream_volume', str(st.id), round(v, 4))
             self.audio.set_stream_volume(st.id, v)
         sv_slider.connect('value-changed', on_sv)
-        self._add_slider_double_click(sv_slider, 1.0)
-        row2.append(sv_slider); row2.append(sv_lbl)
+        self._track_slider_interaction(sv_slider)
+        row2.append(sv_slider)
+        row2.append(self._make_slider_reset_button(
+            sv_slider, 1.0, '↺ 100 %', 'Remettre le volume à 100 %'))
+        row2.append(sv_lbl)
         sv_mute = Gtk.ToggleButton(icon_name='audio-volume-muted-symbolic')
         sv_mute.set_tooltip_text('Muet le flux')
         sv_mute.connect('toggled', lambda _, sid=stream.id: self.audio.toggle_mute(sid))
@@ -1536,7 +1670,7 @@ class LinuxAudioManagerApp(Adw.Application):
                                   step_increment=0.01, page_increment=0.1, page_size=0.0)
         bal_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj_bal)
         bal_slider.set_draw_value(False); bal_slider.set_size_request(130, -1)
-        bal_slider.set_tooltip_text('Balance gauche/droite (centre = 0.50) — double-clic : centrer')
+        bal_slider.set_tooltip_text('Balance gauche/droite (centre = 0.50)')
 
         saved_mode = sett.get('stream_mode', str(stream.id), default='Stéréo')
         _cur_mode  = [saved_mode]  # mutable pour closure
@@ -1547,10 +1681,11 @@ class LinuxAudioManagerApp(Adw.Application):
             current_vol = vol_slider.get_value()
             self.audio.apply_stream_params(st.id, b, m[0], current_vol)
         bal_slider.connect('value-changed', on_bal)
-        self._add_slider_double_click(bal_slider, 0.5)
+        self._track_slider_interaction(bal_slider)
         row2.append(bal_slider)
 
-        ctr_btn = Gtk.Button(label='C'); ctr_btn.add_css_class('flat')
+        ctr_btn = Gtk.Button(label='↺ C'); ctr_btn.add_css_class('reset-slider-button')
+        ctr_btn.set_size_request(58, -1)
         ctr_btn.set_tooltip_text('Centrer la balance')
         ctr_btn.connect('clicked', lambda _: bal_slider.set_value(0.5))
         row2.append(ctr_btn)
@@ -1862,13 +1997,15 @@ class LinuxAudioManagerApp(Adw.Application):
                               step_increment=0.01, page_increment=0.1, page_size=0.0)
         pvs = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
         pvs.set_draw_value(False); pvs.set_hexpand(True)
-        pvs.set_tooltip_text('Volume (0–200 %) — double-clic : 100 %')
+        pvs.set_tooltip_text('Volume (0–200 %)')
         def on_pvol(sc, s=sink, vl=vol_lbl):
             v=sc.get_value(); s.volume=v; vl.set_text(f'{int(v*100)}%')
             self.audio.set_volume(s.id, v)
         pvs.connect('value-changed', on_pvol)
-        self._add_slider_double_click(pvs, 1.0)
+        self._track_slider_interaction(pvs)
         vol_row.append(vol_lbl); vol_row.append(pvs)
+        vol_row.append(self._make_slider_reset_button(
+            pvs, 1.0, '↺ 100 %', 'Remettre le volume à 100 %'))
         vbox.append(vol_row); vbox.append(self._sep())
 
         # ─ Section Fréquence ──────────────────────────────────────────
@@ -1939,6 +2076,7 @@ class LinuxAudioManagerApp(Adw.Application):
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scroll.set_vexpand(True)
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        page.add_css_class('content-page')
         page.set_margin_top(28); page.set_margin_start(28)
         page.set_margin_end(28); page.set_margin_bottom(28)
 
@@ -1949,7 +2087,7 @@ class LinuxAudioManagerApp(Adw.Application):
         t_lbl = Gtk.Label()
         t_lbl.set_markup('<span size="x-large"><b>AudioHub</b></span>')
         v_lbl = Gtk.Label()
-        v_lbl.set_markup('<span color="gray">v1.0.0  ·  Routage audio PipeWire avancé</span>')
+        v_lbl.set_markup('<span color="gray">v1.0.6  ·  Routage audio PipeWire avancé</span>')
         hero.append(logo); hero.append(t_lbl); hero.append(v_lbl)
         page.append(hero); page.append(self._sep())
 
