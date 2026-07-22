@@ -76,7 +76,8 @@ cat > "${STAGING_DIR}/DEBIAN/control" <<EOF
 Package: ${PACKAGE_NAME}
 Version: ${VERSION}
 Architecture: ${ARCH}
-Maintainer: AudioHub <local>
+Maintainer: pcsec <pcsec@localhost>
+Homepage: https://github.com/pcsec/audio-hub
 Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1, pipewire, wireplumber
 Description: Application AudioHub — Routage PipeWire
  Interface GTK4 complète pour routage audio avancé avec PipeWire.
@@ -97,6 +98,11 @@ fi
 # Mettre à jour le cache des icônes
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
+fi
+# Actualiser l'index AppStream pour que le gestionnaire d'applications voie
+# immédiatement le nom, l'éditeur, la licence et l'icône du paquet.
+if command -v appstreamcli >/dev/null 2>&1; then
+    appstreamcli refresh --force >/dev/null 2>&1 || true
 fi
 EOF
 chmod 755 "${STAGING_DIR}/DEBIAN/postinst"

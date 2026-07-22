@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>com.audiohub.audiohub</id>
+  <pkgname>audio-hub</pkgname>
   <name>AudioHub</name>
   <summary>Routage audio PipeWire avancé</summary>
   <metadata_license>CC0-1.0</metadata_license>
@@ -21,6 +22,9 @@
   <releases>
     <release version="1.0.0" date="2026-07-22"/>
   </releases>
+  <provides>
+    <binary>audio-hub</binary>
+  </provides>
   <categories>
     <category>AudioVideo</category>
     <category>Utility</category>

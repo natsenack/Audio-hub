@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from .models import PipeWireSink, PipeWireSource, PipeWireStream
@@ -361,9 +362,16 @@ class LinuxAudioManagerApp(Adw.Application):
         # CAPTURE, le geste reçoit le double-clic avant que le curseur ne le
         # consomme.
         gesture.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        gesture.set_exclusive(False)
+        last_click = [0.0]
 
         def on_pressed(_gesture, n_press, _x, _y):
-            if n_press == 2:
+            now = time.monotonic()
+            # Ne pas dépendre uniquement de n_press : certaines versions de
+            # GTK/Adwaita le réinitialisent quand Gtk.Scale consomme le geste.
+            is_double_click = n_press >= 2 or now - last_click[0] <= 0.45
+            last_click[0] = 0.0 if is_double_click else now
+            if is_double_click:
                 slider.set_value(reset_value)
 
         gesture.connect('pressed', on_pressed)
