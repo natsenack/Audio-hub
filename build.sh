@@ -39,6 +39,7 @@ install -d -m 0755 \
     "${STAGING_DIR}/usr/share/${PACKAGE_NAME}" \
     "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/audiohub" \
     "${STAGING_DIR}/usr/share/applications" \
+    "${STAGING_DIR}/usr/share/metainfo" \
     "${STAGING_DIR}/usr/share/icons/hicolor/256x256/apps" \
     "${STAGING_DIR}/usr/share/icons/hicolor/128x128/apps" \
     "${STAGING_DIR}/usr/share/icons/hicolor/64x64/apps" \
@@ -58,6 +59,8 @@ install -m 644 "${ROOT_DIR}/audiohub/paths.py" "${STAGING_DIR}/usr/share/${PACKA
 install -m 644 "${ROOT_DIR}/audiohub/pipewire.py" "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/audiohub/"
 install -m 644 "${ROOT_DIR}/tray_helper.py" "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/"
 install -m 644 "${ROOT_DIR}/data/audio-hub.desktop" "${STAGING_DIR}/usr/share/applications/"
+install -m 644 "${ROOT_DIR}/data/com.audiohub.AudioHub.metainfo.xml" \
+    "${STAGING_DIR}/usr/share/metainfo/"
 
 # Copier les icônes de différentes tailles
 for size in 256x256 128x128 64x64 48x48 32x32; do

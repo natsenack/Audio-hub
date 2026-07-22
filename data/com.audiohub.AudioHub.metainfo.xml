@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.audiohub.AudioHub</id>
+  <name>AudioHub</name>
+  <summary>Routage audio PipeWire avancé</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>
+      AudioHub permet de router les flux audio PipeWire vers les périphériques
+      de votre choix et de contrôler les volumes depuis une interface GTK.
+    </p>
+  </description>
+  <launchable type="desktop-id">audio-hub.desktop</launchable>
+  <icon type="stock">audio-hub</icon>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>audio</keyword>
+    <keyword>pipewire</keyword>
+    <keyword>volume</keyword>
+    <keyword>routing</keyword>
+  </keywords>
+</component>

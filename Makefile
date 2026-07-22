@@ -31,13 +31,13 @@ check:
 
 git-sync:
 	@echo "==> Git sync..."
-	git add -A
-	@if ! git diff --cached --quiet; then \
-		git commit -m "$(GIT_COMMIT_MSG)"; \
+	git -c safe.directory="$(CURDIR)" add -A
+	@if ! git -c safe.directory="$(CURDIR)" diff --cached --quiet; then \
+		git -c safe.directory="$(CURDIR)" commit -m "$(GIT_COMMIT_MSG)"; \
 	else \
 		echo "Nothing to commit"; \
 	fi
-	git push origin HEAD
+	git -c safe.directory="$(CURDIR)" push origin HEAD
 
 build-deb: git-sync
 	bash build.sh
