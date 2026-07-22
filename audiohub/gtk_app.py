@@ -92,7 +92,7 @@ _SOURCE_ALT_ICON = 'audio-card-symbolic'
 class LinuxAudioManagerApp(Adw.Application):
     def __init__(self):
         super().__init__(
-            application_id='com.github.audio-hub',
+            application_id='com.audiohub.AudioHub',
             flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
         )
         self.connect('activate', self.on_activate)
@@ -111,6 +111,7 @@ class LinuxAudioManagerApp(Adw.Application):
         self._timers_started = False
         self._timer_ids = []
         self._cleanup_done = False
+        self._background_start_requested = False
         self._settings_window = None
         self._routing_filter = 'all'
         self._routing_query = ''
@@ -129,9 +130,11 @@ class LinuxAudioManagerApp(Adw.Application):
             self._quit_app()
             return 0
 
+        self._background_start_requested = '--background' in arguments
         self.activate()
 
         if '--show-window' in arguments or not arguments:
+            self._background_start_requested = False
             GLib.idle_add(self._show_window)
 
         return 0
@@ -149,7 +152,6 @@ class LinuxAudioManagerApp(Adw.Application):
 
         if self.window is None:
             self.window = self._build_window()
-            self.window.connect('close-request', self._on_window_close)
 
         if self._setting('tray', 'enabled', True) and not self.has_tray_helper():
             self._ensure_tray_helper()
@@ -158,14 +160,10 @@ class LinuxAudioManagerApp(Adw.Application):
             self._start_background_timers()
             self._timers_started = True
 
-        self.window.present()
+        if not self._background_start_requested:
+            self.window.present()
 
     # ── Cleanup et gestion fermeture ──────────────────────────────────────────
-
-    def _on_window_close(self, *args):
-        """Cleanup au fermeture de la fenêtre."""
-        self._cleanup_background_resources()
-        return False  # Laisser la fermeture se faire normalement
 
     def _on_shutdown(self, *_args):
         self._cleanup_background_resources()
@@ -570,12 +568,19 @@ class LinuxAudioManagerApp(Adw.Application):
 
     def _on_autostart_setting_changed(self, row, _pspec):
         enabled = row.get_active()
+        if enabled:
+            if not self._setting('tray', 'enabled', default=True):
+                # Un démarrage en arrière-plan doit rester récupérable depuis
+                # le tray ; on le réactive automatiquement si nécessaire.
+                self._set_setting('tray', 'enabled', True)
+            if not self.has_tray_helper() and not self._ensure_tray_helper():
+                # Ne pas activer un autostart qui lancerait une application
+                # invisible sans moyen de la retrouver.
+                self._set_setting('startup', 'autostart', False)
+                row.set_active(False)
+                return
+
         self._set_setting('startup', 'autostart', enabled)
-        if enabled and not self._setting('tray', 'enabled', default=True):
-            # Un démarrage en arrière-plan doit rester récupérable depuis le
-            # tray ; on le réactive automatiquement si nécessaire.
-            self._set_setting('tray', 'enabled', True)
-            self._ensure_tray_helper()
         self._set_autostart_enabled(enabled)
 
     def _set_autostart_enabled(self, enabled):
@@ -610,7 +615,9 @@ class LinuxAudioManagerApp(Adw.Application):
 
     def _reset_preferences(self, settings_window):
         self.audio.settings._data.pop('preferences', None)
+        self.audio.settings._data.pop('ui', None)
         self.audio.settings.save()
+        self._expanded_stream_id = None
         self._apply_color_scheme('system')
         self._set_autostart_enabled(False)
         if not self.has_tray_helper():
@@ -654,10 +661,21 @@ class LinuxAudioManagerApp(Adw.Application):
         return win
 
     def _on_close_request(self, win):
-        """Minimize to tray on close button, unless Ctrl+Q used."""
-        if self._setting('window', 'minimize_on_close', default=True):
+        """Cache la fenêtre à la fermeture seulement si le tray est disponible."""
+        minimize_on_close = bool(
+            self._setting('window', 'minimize_on_close', default=True))
+        tray_enabled = bool(
+            self._setting('tray', 'enabled', default=True))
+
+        if minimize_on_close and tray_enabled:
+            # Ne pas laisser une application invisible si l'intégration tray
+            # n'est pas disponible sur la session courante.
+            if not self.has_tray_helper() and not self._ensure_tray_helper():
+                self._cleanup_background_resources()
+                return False
             win.set_visible(False)
             return True
+
         self._cleanup_background_resources()
         return False
 

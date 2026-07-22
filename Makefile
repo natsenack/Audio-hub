@@ -1,6 +1,8 @@
 .PHONY: help run test check git-sync build-extension build-deb build-deb-local install-extension install-deb enable-extension disable-extension uninstall-extension clean
 
 APP_BIN = audio-hub
+DEB_VERSION ?= 1.0.0
+DEB_PATH = build/$(APP_BIN)_$(DEB_VERSION)_all.deb
 EXTENSION_UUID = audio-hub@localhost.github.io
 GIT_COMMIT_MSG ?= chore: prepare deb build
 
@@ -27,7 +29,11 @@ test:
 	@echo "No automated tests are currently shipped."
 
 check:
-	python3 -m py_compile audio-hub.py audio_device_classifier.py audiohub/__init__.py audiohub/browser_streams.py audiohub/gtk_app.py audiohub/models.py audiohub/paths.py audiohub/pipewire.py
+	bash -n build.sh build-extension.sh launch.sh
+	python3 -m py_compile audio-hub.py audio_device_classifier.py tray_helper.py audiohub/*.py
+	@if command -v desktop-file-validate >/dev/null 2>&1; then desktop-file-validate data/audio-hub.desktop; fi
+	@if command -v appstreamcli >/dev/null 2>&1; then appstreamcli validate --no-net --strict data/com.audiohub.audiohub.metainfo.xml; fi
+	@if command -v xmllint >/dev/null 2>&1; then xmllint --noout data/com.audiohub.audiohub.metainfo.xml; fi
 
 git-sync:
 	@echo "==> Git sync..."
@@ -40,13 +46,13 @@ git-sync:
 	git -c safe.directory="$(CURDIR)" push origin HEAD
 
 build-deb: git-sync
-	bash build.sh
+	DEB_VERSION="$(DEB_VERSION)" bash build.sh
 
 build-deb-local:
-	bash build.sh
+	DEB_VERSION="$(DEB_VERSION)" VERSION="$(DEB_VERSION)" bash build.sh
 
 install-deb: build-deb
-	sudo apt install ./build/$(APP_BIN)_1.0.0_all.deb
+	sudo apt install ./$(DEB_PATH)
 
 build-extension:
 	bash build-extension.sh

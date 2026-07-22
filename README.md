@@ -51,14 +51,14 @@ bash launch.sh
 ## Build
 
 ```bash
-make build-deb
+make build-deb-local
 make build-extension
 ```
 
 Le paquet Debian genere:
 
 ```bash
-build/audio-hub_1.0.0_all.deb
+build/audio-hub_<version>_all.deb
 ```
 
 L'extension GNOME genere:

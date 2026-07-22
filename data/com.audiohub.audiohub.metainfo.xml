@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.audiohub.AudioHub</id>
+  <id>com.audiohub.audiohub</id>
   <name>AudioHub</name>
   <summary>Routage audio PipeWire avancé</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>GPL-3.0-or-later</project_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <developer id="com.audiohub">
+    <name>AudioHub contributors</name>
+  </developer>
   <description>
     <p>
       AudioHub permet de router les flux audio PipeWire vers les périphériques
@@ -12,7 +15,12 @@
     </p>
   </description>
   <launchable type="desktop-id">audio-hub.desktop</launchable>
+  <url type="homepage">https://github.com/pcsec/audio-hub</url>
   <icon type="stock">audio-hub</icon>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2026-07-22"/>
+  </releases>
   <categories>
     <category>AudioVideo</category>
     <category>Utility</category>

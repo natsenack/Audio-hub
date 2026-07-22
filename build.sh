@@ -3,11 +3,12 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_NAME="audio-hub"
-VERSION="1.0.0"
+VERSION="${VERSION:-${DEB_VERSION:-1.0.0}}"
 ARCH="all"
 BUILD_DIR="${ROOT_DIR}/build"
-STAGING_DIR="/tmp/audio-hub-deb-$$"
+STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/audio-hub-deb.XXXXXX")"
 DEB_PATH="${BUILD_DIR}/${PACKAGE_NAME}_${VERSION}_${ARCH}.deb"
+trap 'rm -rf -- "$STAGING_DIR"' EXIT
 
 # Vérifications préalables
 if [[ ! -f "${ROOT_DIR}/audio-hub.py" ]]; then
@@ -26,11 +27,8 @@ if [[ ! -f "${ROOT_DIR}/data/icons/audio-hub.svg" ]]; then
 fi
 
 # Nettoyage et préparation
-rm -f "${DEB_PATH}"
+rm -f -- "${DEB_PATH}"
 mkdir -p "${BUILD_DIR}"
-
-trap "rm -rf '${STAGING_DIR}'" EXIT
-mkdir -p "${STAGING_DIR}"
 
 # Préparation de l'arborescence .deb
 install -d -m 0755 \
@@ -59,7 +57,7 @@ install -m 644 "${ROOT_DIR}/audiohub/paths.py" "${STAGING_DIR}/usr/share/${PACKA
 install -m 644 "${ROOT_DIR}/audiohub/pipewire.py" "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/audiohub/"
 install -m 644 "${ROOT_DIR}/tray_helper.py" "${STAGING_DIR}/usr/share/${PACKAGE_NAME}/"
 install -m 644 "${ROOT_DIR}/data/audio-hub.desktop" "${STAGING_DIR}/usr/share/applications/"
-install -m 644 "${ROOT_DIR}/data/com.audiohub.AudioHub.metainfo.xml" \
+install -m 644 "${ROOT_DIR}/data/com.audiohub.audiohub.metainfo.xml" \
     "${STAGING_DIR}/usr/share/metainfo/"
 
 # Copier les icônes de différentes tailles
@@ -76,7 +74,7 @@ Package: ${PACKAGE_NAME}
 Version: ${VERSION}
 Architecture: ${ARCH}
 Maintainer: AudioHub <local>
-Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-4.0, pipewire, wireplumber
+Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-4.0, gir1.2-adwaita-1, pipewire, wireplumber
 Description: Application AudioHub — Routage PipeWire
  Interface GTK4 complète pour routage audio avancé avec PipeWire.
  .
@@ -102,7 +100,7 @@ chmod 755 "${STAGING_DIR}/DEBIAN/postinst"
 
 # Créer le .deb
 echo "==> Construction du paquet..."
-dpkg-deb --build "${STAGING_DIR}" "${DEB_PATH}"
+dpkg-deb --build --root-owner-group "${STAGING_DIR}" "${DEB_PATH}"
 
 echo "✅ Paquet construit : ${DEB_PATH}"
 echo ""
